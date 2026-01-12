@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<title>ASG0 - Vector Library</title>
+	<style>
+		body {
+			font-family: system-ui, sans-serif;
+		}
+
+		canvas {
+			border: 1px solid #333;
+			background: black;
+		}
+
+		.row {
+			margin: 10px 0;
+			display: flex;
+			gap: 10px;
+			align-items: center;
+			flex-wrap: wrap;
+		}
+
+		label {
+			display: inline-flex;
+			gap: 6px;
+			align-items: center;
+		}
+
+		input[type="number"] {
+			width: 90px;
+		}
+	</style>
+</head>
+
+<body onload="main()">
+	<canvas id="example" width="400" height="400">
+		Please use a browser that supports "canvas"
+	</canvas>
+
+	<div class="row">
+
+		<div><strong>v1</strong></div>
+		<label>x <input id="v1x" type="number" step="0.01" value="2.25" /></label>
+		<label>y <input id="v1y" type="number" step="0.01" value="2.25" /></label>
+
+	</div>
+
+	<div class="row">
+
+		<div><strong>v2</strong></div>
+		<label>x <input id="v2x" type="number" step="0.01" value="0.00" /></label>
+		<label>y <input id="v2y" type="number" step="0.01" value="0.00" /></label>
+
+	</div>
+
+	<input type="button" value="Draw" onclick="handleDrawEvent()" />
+
+	<div class="row">
+		<label>Operation
+			<select id="op">
+				<option value="add">Add</option>
+				<option value="sub">Sub</option>
+				<option value="mul">Mul</option>
+				<option value="div">Div</option>
+				<option value="mag">Magnitude</option>
+				<option value="norm">Normalize</option>
+				<option value="angle">Angle between</option>
+				<option value="area">Area</option>
+			</select>
+		</label>
+
+		<label>Scalar
+			<input id="scalar" type="number" step="0.01" value="2.00" />
+		</label>
+
+		<input type="button" value="Do Operation" onclick="handleDrawOperationEvent()" />
+	</div>
+
+	<script src="lib/cuon-matrix-cse160.js"></script>
+	<script src="asg0.js"></script>
+</body>
+
+</html>
