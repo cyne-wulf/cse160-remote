@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSE 160 - Assignment Index</title>
+    <style>
+      :root {
+        --bg: #0b0c0f;
+        --panel: #11131a;
+        --text: #e8eaf0;
+        --muted: #a8adbd;
+        --border: #23283a;
+        --ok: #2dd4bf;
+        --todo: #f59e0b;
+        --no: #ef4444;
+        --link: #93c5fd;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        background: radial-gradient(
+          1200px 800px at 20% 0%,
+          #14172a 0%,
+          var(--bg) 55%
+        );
+        color: var(--text);
+        line-height: 1.4;
+      }
+
+      .container {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 32px 16px 56px;
+      }
+
+      header {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+        letter-spacing: 0.2px;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+        align-items: stretch;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(0, 0, 0, 0.15);
+
+        /* critical: let card grow with content */
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .card h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap; /* allow title + badge to wrap */
+        min-width: 0;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.03);
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .done {
+        color: var(--ok);
+        border-color: color-mix(in srgb, var(--ok) 30%, var(--border));
+      }
+      .done .dot {
+        background: var(--ok);
+      }
+
+      .inprog {
+        color: var(--todo);
+        border-color: color-mix(in srgb, var(--todo) 30%, var(--border));
+      }
+      .inprog .dot {
+        background: var(--todo);
+      }
+
+      .notdone {
+        color: var(--no);
+        border-color: color-mix(in srgb, var(--no) 30%, var(--border));
+      }
+      .notdone .dot {
+        background: var(--no);
+      }
+
+      .links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap; /* allow links to wrap */
+        min-width: 0;
+      }
+
+      a {
+        color: var(--link);
+        text-decoration: none;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 14px 0;
+      }
+
+      footer {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      code {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        color: color-mix(in srgb, var(--text) 80%, var(--muted));
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <header>
+        <h1>CSE 160 - Assignment Index</h1>
+        <div class="meta">
+          <span>Student: Ashan Devine</span>
+          <span> · </span>
+          <span>Winter 2026</span>
+        </div>
+      </header>
+
+      <div class="panel">
+        <div class="row">
+          <div class="meta">
+            Repository layout: <code>/asgn0 ... /asgn5</code>
+          </div>
+          <div class="meta">GitHub Pages root: <code>/index.html</code></div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="row">
+              <h3>Assignment 0</h3>
+              <span class="badge done"><span class="dot"></span>Completed</span>
+            </div>
+            <div class="links">
+              <a href="./asgn0/asg0.html">asgn0 demo page</a>
+              <a href="./asgn0/lib/vectorTests.html">Vector tests</a>
+            </div>
+            <div class="small">
+              Vector drawing + Vector3 operations
+              (add/sub/mul/div/magnitude/normalize/dot/cross).
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h3>Assignment 1</h3>
+              <span class="badge notdone"
+                ><span class="dot"></span>Not started</span
+              >
+            </div>
+            <div class="links">
+              <a href="./asgn1/README.md">README</a>
+            </div>
+            <div class="small">No runnable page linked yet.</div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h3>Assignment 2</h3>
+              <span class="badge notdone"
+                ><span class="dot"></span>Not started</span
+              >
+            </div>
+            <div class="links">
+              <a href="./asgn2/README.md">README</a>
+            </div>
+            <div class="small">No runnable page linked yet.</div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h3>Assignment 3</h3>
+              <span class="badge notdone"
+                ><span class="dot"></span>Not started</span
+              >
+            </div>
+            <div class="links">
+              <a href="./asgn3/README.md">README</a>
+            </div>
+            <div class="small">No runnable page linked yet.</div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h3>Assignment 4</h3>
+              <span class="badge notdone"
+                ><span class="dot"></span>Not started</span
+              >
+            </div>
+            <div class="links">
+              <a href="./asgn4/README.md">README</a>
+            </div>
+            <div class="small">No runnable page linked yet.</div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h3>Assignment 5</h3>
+              <span class="badge notdone"
+                ><span class="dot"></span>Not started</span
+              >
+            </div>
+            <div class="links">
+              <a href="./asgn5/README.md">README</a>
+            </div>
+            <div class="small">No runnable page linked yet.</div>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="small">
+          Status legend:
+          <span class="badge done"><span class="dot"></span>Completed</span>
+          <span class="badge inprog"><span class="dot"></span>In progress</span>
+          <span class="badge notdone"
+            ><span class="dot"></span>Not started</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        console.log("CSE 160 index.html edit instructions");
+        console.log("-----------------------------------");
+        console.log("Each assignment card has a status badge like:");
+        console.log(
+          '  <span class="badge done"><span class="dot"></span>Completed</span>',
+        );
+        console.log("");
+        console.log("To change status, edit BOTH:");
+        console.log("  1) the badge class: done | inprog | notdone");
+        console.log(
+          "  2) the badge text:  Completed | In progress | Not started",
+        );
+        console.log("");
+        console.log("Examples:");
+        console.log(
+          '  - In progress: <span class="badge inprog"><span class="dot"></span>In progress</span>',
+        );
+        console.log(
+          '  - Not started: <span class="badge notdone"><span class="dot"></span>Not started</span>',
+        );
+        console.log(
+          '  - Completed:   <span class="badge done"><span class="dot"></span>Completed</span>',
+        );
+        console.log("");
+        console.log("To add a runnable demo link for an assignment, add:");
+        console.log('  <a href="./asgnN/your_entry.html">Run demo</a>');
+        console.log(
+          'inside that assignment card\'s <div class="links"> ... </div>.',
+        );
+      })();
+    </script>
+  </body>
+</html>
