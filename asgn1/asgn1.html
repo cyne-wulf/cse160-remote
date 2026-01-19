@@ -26,10 +26,10 @@
       background-color: #000;
     }
     .controls {
-      background-color: #16213e;
       padding: 15px;
       border-radius: 8px;
       margin-bottom: 15px;
+      border: 1px solid #2a3a5e;
     }
     .control-row {
       display: flex;
@@ -91,10 +91,10 @@
       margin-left: 10px;
     }
     .awesomeness {
-      background-color: #16213e;
       padding: 15px;
       border-radius: 8px;
       margin-top: 15px;
+      border: 1px solid #2a3a5e;
     }
     .awesomeness h3 {
       color: #00d4ff;
@@ -103,6 +103,22 @@
     .awesomeness ul {
       margin: 0;
       padding-left: 20px;
+    }
+    .sketch-section {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      text-align: center;
+      border: 1px solid #2a3a5e;
+    }
+    .sketch-section h3 {
+      color: #00d4ff;
+      margin-top: 0;
+    }
+    .sketch-section img {
+      max-width: 100%;
+      border: 2px solid #00d4ff;
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -177,6 +193,11 @@
       <li><strong>Undo/Redo System:</strong> Remove or restore shapes with the Undo and Redo buttons. Maintains a separate redo stack for restored shapes.</li>
       <li><strong>Gap Filling Brush:</strong> When dragging quickly, the brush interpolates between positions to create smooth, continuous strokes without gaps.</li>
     </ul>
+  </div>
+
+  <div class="sketch-section">
+    <h3>Original Sketch (Graph Paper)</h3>
+    <img src="graph-paper-sketch.png" alt="Hand-drawn sketch on graph paper used as reference for Draw Picture feature">
   </div>
 
   <!-- Include WebGL utility libraries -->
