@@ -492,43 +492,49 @@ function renderFrontLeftLeg(bodyBase) {
   var upperAngle = g_isAnimating ? g_legSwing[0] : g_upperLegAngle;
   var lowerAngle = g_isAnimating ? Math.max(0, -g_legSwing[0] * 0.5 + 20) : g_lowerLegAngle;
   var footAngleVal = g_isAnimating ? g_legSwing[0] * 0.3 : g_footAngle;
+  var splay = g_isPoking ? g_pokeLegSplay : 0;
 
-  renderLeg(bodyBase, -0.18, 0.2, upperAngle, lowerAngle, footAngleVal);
+  renderLeg(bodyBase, -0.18, 0.2, upperAngle, lowerAngle, footAngleVal, -splay);
 }
 
 function renderFrontRightLeg(bodyBase) {
   var upperAngle = g_isAnimating ? g_legSwing[1] : 0;
   var lowerAngle = g_isAnimating ? Math.max(0, -g_legSwing[1] * 0.5 + 20) : 20;
   var footAngleVal = g_isAnimating ? g_legSwing[1] * 0.3 : 0;
+  var splay = g_isPoking ? g_pokeLegSplay : 0;
 
-  renderLeg(bodyBase, 0.18, 0.2, upperAngle, lowerAngle, footAngleVal);
+  renderLeg(bodyBase, 0.18, 0.2, upperAngle, lowerAngle, footAngleVal, splay);
 }
 
 function renderBackLeftLeg(bodyBase) {
   var upperAngle = g_isAnimating ? g_legSwing[2] : 0;
   var lowerAngle = g_isAnimating ? Math.max(0, -g_legSwing[2] * 0.5 + 20) : 20;
   var footAngleVal = g_isAnimating ? g_legSwing[2] * 0.3 : 0;
+  var splay = g_isPoking ? g_pokeLegSplay : 0;
 
-  renderLeg(bodyBase, -0.18, -0.22, upperAngle, lowerAngle, footAngleVal);
+  renderLeg(bodyBase, -0.18, -0.22, upperAngle, lowerAngle, footAngleVal, -splay);
 }
 
 function renderBackRightLeg(bodyBase) {
   var upperAngle = g_isAnimating ? g_legSwing[3] : 0;
   var lowerAngle = g_isAnimating ? Math.max(0, -g_legSwing[3] * 0.5 + 20) : 20;
   var footAngleVal = g_isAnimating ? g_legSwing[3] * 0.3 : 0;
+  var splay = g_isPoking ? g_pokeLegSplay : 0;
 
-  renderLeg(bodyBase, 0.18, -0.22, upperAngle, lowerAngle, footAngleVal);
+  renderLeg(bodyBase, 0.18, -0.22, upperAngle, lowerAngle, footAngleVal, splay);
 }
 
-function renderLeg(bodyBase, xOffset, zOffset, upperAngle, lowerAngle, footAngleVal) {
+function renderLeg(bodyBase, xOffset, zOffset, upperAngle, lowerAngle, footAngleVal, splayAngle) {
+  splayAngle = splayAngle || 0;  // Default to 0 if not provided
+
   // Leg dimensions
   var upperLen = 0.12;
   var lowerLen = 0.10;
-  var footLen = 0.08;
 
   // LEVEL 1: Upper Leg
   var upperLeg = new Matrix4(bodyBase);
   upperLeg.translate(xOffset, -0.12, zOffset);  // Hip joint position
+  upperLeg.rotate(splayAngle, 0, 0, 1);          // Z-axis rotation for splay
   upperLeg.rotate(upperAngle, 1, 0, 0);          // Hip rotation
 
   var upperLegRender = new Matrix4(upperLeg);
