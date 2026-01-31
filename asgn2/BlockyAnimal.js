@@ -61,6 +61,10 @@ var g_pokeStartTime = 0;
 var g_pokeJumpHeight = 0;
 var g_pokeSpin = 0;
 
+// Tail segment offsets (finalized values)
+var g_tail12X = 0.01, g_tail12Y = 0.02, g_tail12Z = -0.15;
+var g_tail23X = 0.01, g_tail23Y = -0.01, g_tail23Z = -0.15;
+
 // Mouse drag state
 var g_isDragging = false;
 var g_lastMouseX = 0;
@@ -308,7 +312,7 @@ function drawRat() {
   var bodyMatrix = new Matrix4();
   bodyMatrix.translate(0, bodyYOffset, 0);
   bodyMatrix.scale(0.5, 0.3, 0.7);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, bodyMatrix, RAT_BODY_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, bodyMatrix, RAT_BODY_COLOR);
 
   // We need the body's base transformation (without scale) for children
   var bodyBase = new Matrix4();
@@ -325,7 +329,7 @@ function drawRat() {
   var headBase = new Matrix4(headMatrix);
 
   headMatrix.scale(0.28, 0.24, 0.28);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, headMatrix, RAT_HEAD_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, headMatrix, RAT_HEAD_COLOR);
 
   // ========================================
   // SNOUT (Level 2 - child of head)
@@ -333,13 +337,13 @@ function drawRat() {
   var snoutMatrix = new Matrix4(headBase);
   snoutMatrix.translate(0, -0.02, 0.18);
   snoutMatrix.scale(0.14, 0.1, 0.12);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, snoutMatrix, RAT_SNOUT_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, snoutMatrix, RAT_SNOUT_COLOR);
 
   // Nose
   var noseMatrix = new Matrix4(headBase);
   noseMatrix.translate(0, -0.02, 0.25);
   noseMatrix.scale(0.06, 0.05, 0.04);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, noseMatrix, RAT_NOSE_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, noseMatrix, RAT_NOSE_COLOR);
 
   // ========================================
   // EARS (Level 2 - child of head)
@@ -350,13 +354,13 @@ function drawRat() {
   var leftEarMatrix = new Matrix4(headBase);
   leftEarMatrix.translate(-earOffset, 0.12, 0);
   leftEarMatrix.scale(0.08, 0.12, 0.04);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, leftEarMatrix, RAT_EAR_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, leftEarMatrix, RAT_EAR_COLOR);
 
   // Right ear
   var rightEarMatrix = new Matrix4(headBase);
   rightEarMatrix.translate(earOffset, 0.12, 0);
   rightEarMatrix.scale(0.08, 0.12, 0.04);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, rightEarMatrix, RAT_EAR_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, rightEarMatrix, RAT_EAR_COLOR);
 
   // ========================================
   // EYES (Level 2 - child of head)
@@ -367,13 +371,13 @@ function drawRat() {
   var leftEyeMatrix = new Matrix4(headBase);
   leftEyeMatrix.translate(-eyeOffset, 0.04, 0.12);
   leftEyeMatrix.scale(0.05, 0.05, 0.05);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, leftEyeMatrix, RAT_EYE_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, leftEyeMatrix, RAT_EYE_COLOR);
 
   // Right eye
   var rightEyeMatrix = new Matrix4(headBase);
   rightEyeMatrix.translate(eyeOffset, 0.04, 0.12);
   rightEyeMatrix.scale(0.05, 0.05, 0.05);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, rightEyeMatrix, RAT_EYE_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, rightEyeMatrix, RAT_EYE_COLOR);
 
   // ========================================
   // TAIL (3-Level Cylinder Chain)
@@ -407,29 +411,29 @@ function renderTail(bodyBase) {
   tailBaseRender.translate(0, -tailSegmentLength/2, 0);
   tailBaseRender.rotate(90, 1, 0, 0); // Align cylinder along -Z
   tailBaseRender.scale(tailRadius, tailSegmentLength, tailRadius);
-  drawCylinder(gl, a_Position, u_ModelMatrix, u_FragColor, tailBaseRender, RAT_TAIL_COLOR);
+  drawCylinderWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, tailBaseRender, RAT_TAIL_COLOR);
 
   // LEVEL 2: Tail Middle
   var tailMid = new Matrix4(tailBase);
-  tailMid.translate(0, -tailSegmentLength, 0);
+  tailMid.translate(g_tail12X, g_tail12Y, g_tail12Z);
   tailMid.rotate(g_tailWag2, 0, 1, 0);
 
   var tailMidRender = new Matrix4(tailMid);
   tailMidRender.translate(0, -tailSegmentLength/2, 0);
   tailMidRender.rotate(90, 1, 0, 0);
   tailMidRender.scale(tailRadius * 0.8, tailSegmentLength, tailRadius * 0.8);
-  drawCylinder(gl, a_Position, u_ModelMatrix, u_FragColor, tailMidRender, RAT_TAIL_COLOR);
+  drawCylinderWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, tailMidRender, RAT_TAIL_COLOR);
 
   // LEVEL 3: Tail Tip
   var tailTip = new Matrix4(tailMid);
-  tailTip.translate(0, -tailSegmentLength, 0);
+  tailTip.translate(g_tail23X, g_tail23Y, g_tail23Z);
   tailTip.rotate(g_tailWag3, 0, 1, 0);
 
   var tailTipRender = new Matrix4(tailTip);
   tailTipRender.translate(0, -tailSegmentLength/2, 0);
   tailTipRender.rotate(90, 1, 0, 0);
   tailTipRender.scale(tailRadius * 0.6, tailSegmentLength, tailRadius * 0.6);
-  drawCylinder(gl, a_Position, u_ModelMatrix, u_FragColor, tailTipRender, RAT_TAIL_COLOR);
+  drawCylinderWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, tailTipRender, RAT_TAIL_COLOR);
 }
 
 // ============================================================================
@@ -483,7 +487,7 @@ function renderLeg(bodyBase, xOffset, zOffset, upperAngle, lowerAngle, footAngle
   var upperLegRender = new Matrix4(upperLeg);
   upperLegRender.translate(0, -upperLen/2, 0);   // Pivot offset
   upperLegRender.scale(0.07, upperLen, 0.07);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, upperLegRender, RAT_LEG_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, upperLegRender, RAT_LEG_COLOR);
 
   // LEVEL 2: Lower Leg (inherits upper leg transform)
   var lowerLegBase = new Matrix4(upperLeg);
@@ -493,7 +497,7 @@ function renderLeg(bodyBase, xOffset, zOffset, upperAngle, lowerAngle, footAngle
   var lowerLegRender = new Matrix4(lowerLegBase);
   lowerLegRender.translate(0, -lowerLen/2, 0);
   lowerLegRender.scale(0.055, lowerLen, 0.055);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, lowerLegRender, RAT_LEG_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, lowerLegRender, RAT_LEG_COLOR);
 
   // LEVEL 3: Foot (inherits upper + lower transforms)
   var footBase = new Matrix4(lowerLegBase);
@@ -503,7 +507,7 @@ function renderLeg(bodyBase, xOffset, zOffset, upperAngle, lowerAngle, footAngle
   var footRender = new Matrix4(footBase);
   footRender.translate(0, -0.02, 0.02);          // Offset for foot shape
   footRender.scale(0.06, 0.04, 0.09);
-  drawCube(gl, a_Position, u_ModelMatrix, u_FragColor, footRender, RAT_FOOT_COLOR);
+  drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, footRender, RAT_FOOT_COLOR);
 }
 
 // ============================================================================
