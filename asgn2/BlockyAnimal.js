@@ -55,11 +55,15 @@ var g_tailWag3 = 0;
 var g_headNod = 0;
 var g_bodyBob = 0;
 
-// Poke animation state
+// Poke animation state - "Startled Rat" reaction
 var g_isPoking = false;
 var g_pokeStartTime = 0;
 var g_pokeJumpHeight = 0;
-var g_pokeSpin = 0;
+var g_pokeShake = 0;           // Body trembling
+var g_pokeLegSplay = 0;        // Legs spread outward in surprise
+var g_pokeTailFrantic = 0;     // Tail goes crazy
+var g_pokeEarPerk = 0;         // Ears perk up
+var g_pokeEyeScale = 1;        // Eyes bug out
 
 // Tail segment offsets (finalized values)
 var g_tail12X = 0.01, g_tail12Y = 0.02, g_tail12Z = -0.15;
@@ -247,19 +251,56 @@ function updateAnimationAngles() {
 function updatePokeAnimation() {
   if (!g_isPoking) return;
 
-  var t = (g_seconds - g_pokeStartTime) / 1.5; // 1.5 sec duration
+  var duration = 2.0; // 2 second animation
+  var t = (g_seconds - g_pokeStartTime) / duration;
 
   if (t > 1) {
+    // Reset all poke state
     g_isPoking = false;
     g_pokeJumpHeight = 0;
-    g_pokeSpin = 0;
+    g_pokeShake = 0;
+    g_pokeLegSplay = 0;
+    g_pokeTailFrantic = 0;
+    g_pokeEarPerk = 0;
+    g_pokeEyeScale = 1;
     return;
   }
 
-  // Jump arc
-  g_pokeJumpHeight = 0.3 * Math.sin(t * Math.PI);
-  // Full spin
-  g_pokeSpin = 360 * t;
+  // Phase 1 (0-0.15): Initial startle - quick jump up
+  // Phase 2 (0.15-0.6): Suspended in air, trembling, legs splayed
+  // Phase 3 (0.6-1.0): Slowly recover and land
+
+  if (t < 0.15) {
+    // Quick jump up
+    var jumpT = t / 0.15;
+    g_pokeJumpHeight = 0.4 * jumpT;
+    g_pokeLegSplay = 40 * jumpT;  // Legs splay outward
+    g_pokeEarPerk = 0.08 * jumpT; // Ears perk up
+    g_pokeEyeScale = 1 + 0.6 * jumpT; // Eyes bug out
+  } else if (t < 0.6) {
+    // Suspended, trembling
+    var trembleT = (t - 0.15) / 0.45;
+    g_pokeJumpHeight = 0.4;
+    g_pokeLegSplay = 40;
+    g_pokeEarPerk = 0.08;
+    g_pokeEyeScale = 1.6;
+    // Rapid shake that diminishes over time
+    var shakeIntensity = 1 - trembleT * 0.7;
+    g_pokeShake = shakeIntensity * 5 * Math.sin(g_seconds * 80);
+  } else {
+    // Recovery - slowly come down
+    var recoverT = (t - 0.6) / 0.4;
+    var easeOut = 1 - recoverT;
+    g_pokeJumpHeight = 0.4 * easeOut * easeOut;
+    g_pokeLegSplay = 40 * easeOut;
+    g_pokeEarPerk = 0.08 * easeOut;
+    g_pokeEyeScale = 1 + 0.6 * easeOut;
+    g_pokeShake = 0;
+  }
+
+  // Frantic tail throughout (rapid wagging)
+  var tailIntensity = t < 0.6 ? 1 : (1 - (t - 0.6) / 0.4);
+  g_pokeTailFrantic = tailIntensity * 45 * Math.sin(g_seconds * 25);
 }
 
 // ============================================================================
@@ -292,8 +333,9 @@ function renderScene() {
   g_globalRotateMatrix.rotate(g_mouseRotationX, 1, 0, 0);
   g_globalRotateMatrix.rotate(g_mouseRotationY + g_globalRotationSlider, 0, 1, 0);
 
-  if (g_isPoking) {
-    g_globalRotateMatrix.rotate(g_pokeSpin, 0, 1, 0);
+  // Apply shake effect during poke
+  if (g_isPoking && g_pokeShake !== 0) {
+    g_globalRotateMatrix.rotate(g_pokeShake, 0, 0, 1);
   }
 
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, g_globalRotateMatrix.elements);
@@ -349,34 +391,36 @@ function drawRat() {
   // EARS (Level 2 - child of head)
   // ========================================
   var earOffset = 0.12;
+  var earPerk = g_isPoking ? g_pokeEarPerk : 0;
 
   // Left ear
   var leftEarMatrix = new Matrix4(headBase);
-  leftEarMatrix.translate(-earOffset, 0.12, 0);
-  leftEarMatrix.scale(0.08, 0.12, 0.04);
+  leftEarMatrix.translate(-earOffset, 0.12 + earPerk, 0);
+  leftEarMatrix.scale(0.08, 0.12 + earPerk, 0.04);
   drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, leftEarMatrix, RAT_EAR_COLOR);
 
   // Right ear
   var rightEarMatrix = new Matrix4(headBase);
-  rightEarMatrix.translate(earOffset, 0.12, 0);
-  rightEarMatrix.scale(0.08, 0.12, 0.04);
+  rightEarMatrix.translate(earOffset, 0.12 + earPerk, 0);
+  rightEarMatrix.scale(0.08, 0.12 + earPerk, 0.04);
   drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, rightEarMatrix, RAT_EAR_COLOR);
 
   // ========================================
   // EYES (Level 2 - child of head)
   // ========================================
   var eyeOffset = 0.1;
+  var eyeScale = g_isPoking ? 0.05 * g_pokeEyeScale : 0.05;
 
   // Left eye
   var leftEyeMatrix = new Matrix4(headBase);
   leftEyeMatrix.translate(-eyeOffset, 0.04, 0.12);
-  leftEyeMatrix.scale(0.05, 0.05, 0.05);
+  leftEyeMatrix.scale(eyeScale, eyeScale, eyeScale);
   drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, leftEyeMatrix, RAT_EYE_COLOR);
 
   // Right eye
   var rightEyeMatrix = new Matrix4(headBase);
   rightEyeMatrix.translate(eyeOffset, 0.04, 0.12);
-  rightEyeMatrix.scale(0.05, 0.05, 0.05);
+  rightEyeMatrix.scale(eyeScale, eyeScale, eyeScale);
   drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, rightEyeMatrix, RAT_EYE_COLOR);
 
   // ========================================
@@ -401,10 +445,13 @@ function renderTail(bodyBase) {
   var tailSegmentLength = 0.15;
   var tailRadius = 0.03;
 
+  // Add frantic tail motion during poke
+  var franticWag = g_isPoking ? g_pokeTailFrantic : 0;
+
   // LEVEL 1: Tail Base
   var tailBase = new Matrix4(bodyBase);
   tailBase.translate(0, 0, -0.35);
-  tailBase.rotate(-30 + g_tailWag, 0, 1, 0);
+  tailBase.rotate(-30 + g_tailWag + franticWag, 0, 1, 0);
   tailBase.rotate(-20, 1, 0, 0);
 
   var tailBaseRender = new Matrix4(tailBase);
@@ -416,7 +463,7 @@ function renderTail(bodyBase) {
   // LEVEL 2: Tail Middle
   var tailMid = new Matrix4(tailBase);
   tailMid.translate(g_tail12X, g_tail12Y, g_tail12Z);
-  tailMid.rotate(g_tailWag2, 0, 1, 0);
+  tailMid.rotate(g_tailWag2 + franticWag * 1.2, 0, 1, 0);
 
   var tailMidRender = new Matrix4(tailMid);
   tailMidRender.translate(0, -tailSegmentLength/2, 0);
@@ -427,7 +474,7 @@ function renderTail(bodyBase) {
   // LEVEL 3: Tail Tip
   var tailTip = new Matrix4(tailMid);
   tailTip.translate(g_tail23X, g_tail23Y, g_tail23Z);
-  tailTip.rotate(g_tailWag3, 0, 1, 0);
+  tailTip.rotate(g_tailWag3 + franticWag * 1.5, 0, 1, 0);
 
   var tailTipRender = new Matrix4(tailTip);
   tailTipRender.translate(0, -tailSegmentLength/2, 0);
