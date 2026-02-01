@@ -7,14 +7,35 @@ class Camera {
     this.at = new Vector3([0, 0.5, -100]);
     this.up = new Vector3([0, 1, 0]);
     this.fov = 60;
+    
+    // Physics properties
+    this.yVelocity = 0;
+    this.gravity = 0.02; // Downward acceleration
+    this.jumpStrength = 0.25; // Initial upward velocity
+    this.onGround = false;
   }
 
-  // Check if a position is valid (not inside a wall)
+  // Check if a position is valid (not inside a wall that is too high)
   canMoveTo(x, z, map) {
-    var gridX = Math.floor(x) + 16;
-    var gridZ = Math.floor(z) + 16;
+    var gridX = Math.floor(x + 0.5) + 16;
+    var gridZ = Math.floor(z + 0.5) + 16;
     if (gridX < 0 || gridX >= 32 || gridZ < 0 || gridZ >= 32) return false;
-    return map[gridX][gridZ] === 0;  // Can only move to empty cells
+    
+    var height = map[gridX][gridZ];
+    
+    // Calculate the top of the block at target position
+    // Map value H means blocks exist from floor up to H*1 unit height
+    // Since center is 0, top of block H is at (H - 0.5)
+    // If map is 0, "floor" is at -0.5
+    var blockTop = (height === 0) ? -0.5 : (height - 0.5);
+    
+    // Check if our feet are high enough to step onto this block
+    // Eye is at 0.5 initially, feet at -0.5. Player height approx 1.0.
+    var feetY = this.eye.elements[1] - 1.0;
+    
+    // We can move if our feet are roughly above the block's top
+    // Allow a small margin (epsilon) so we don't get stuck on edges
+    return feetY >= (blockTop - 0.2);
   }
 
   // Move forward along view direction (constrained to XZ plane)
@@ -134,6 +155,50 @@ class Camera {
 
     this.at.set(this.eye);
     this.at.add(f_prime);
+  }
+
+  // Jump logic
+  jump() {
+    if (this.onGround) {
+      this.yVelocity = this.jumpStrength;
+      this.onGround = false;
+    }
+  }
+
+  // Physics loop (gravity and collision)
+  updatePhysics(map) {
+    // Apply velocity
+    this.eye.elements[1] += this.yVelocity;
+    this.at.elements[1] += this.yVelocity;
+
+    // Apply gravity
+    this.yVelocity -= this.gravity;
+
+    // Find ground level at current position
+    var gridX = Math.floor(this.eye.elements[0] + 0.5) + 16;
+    var gridZ = Math.floor(this.eye.elements[2] + 0.5) + 16;
+    
+    var height = 0;
+    if (gridX >= 0 && gridX < 32 && gridZ >= 0 && gridZ < 32 && map) {
+        height = map[gridX][gridZ];
+    }
+    
+    var blockTop = (height === 0) ? -0.5 : (height - 0.5);
+    var targetEyeY = blockTop + 1.0; // Maintain 1.0 unit eye height
+
+    // Check collision with floor
+    if (this.eye.elements[1] <= targetEyeY) {
+        // We hit the ground
+        var correction = targetEyeY - this.eye.elements[1];
+        this.eye.elements[1] += correction;
+        this.at.elements[1] += correction;
+        
+        this.yVelocity = 0;
+        this.onGround = true;
+    } else {
+        // In the air
+        this.onGround = false;
+    }
   }
 
   // Get view matrix using lookAt

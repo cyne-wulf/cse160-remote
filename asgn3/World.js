@@ -385,6 +385,10 @@ function placeRat() {
 function setupKeyboard() {
   document.onkeydown = function(ev) {
     g_keys[ev.code] = true;
+    if (ev.code === 'Space') {
+      ev.preventDefault();
+      camera.jump();
+    }
   };
   document.onkeyup = function(ev) {
     g_keys[ev.code] = false;
@@ -439,8 +443,8 @@ function addBlock() {
   f.sub(camera.eye);
   f.normalize();
 
-  var targetX = Math.floor(camera.eye.elements[0] + f.elements[0] * 3) + 16;
-  var targetZ = Math.floor(camera.eye.elements[2] + f.elements[2] * 3) + 16;
+  var targetX = Math.floor(camera.eye.elements[0] + f.elements[0] * 3 + 0.5) + 16;
+  var targetZ = Math.floor(camera.eye.elements[2] + f.elements[2] * 3 + 0.5) + 16;
 
   if (targetX >= 0 && targetX < 32 && targetZ >= 0 && targetZ < 32) {
     if (g_map[targetX][targetZ] < 5) {
@@ -470,8 +474,8 @@ function deleteBlock() {
     var y = checkPos.elements[1];
     var z = checkPos.elements[2];
 
-    var gridX = Math.floor(x) + 16;
-    var gridZ = Math.floor(z) + 16;
+    var gridX = Math.floor(x + 0.5) + 16;
+    var gridZ = Math.floor(z + 0.5) + 16;
 
     if (gridX >= 0 && gridX < 32 && gridZ >= 0 && gridZ < 32) {
       // Get stack height at this grid position
@@ -810,12 +814,15 @@ function processInput() {
   var speed = 0.1;  // Per-frame speed (lower since called every frame)
   var rotSpeed = 2;
 
-  if (g_keys['KeyW']) camera.moveForward(speed, g_map);
-  if (g_keys['KeyS']) camera.moveBackward(speed, g_map);
+  if (g_keys['KeyW'] || g_keys['ArrowUp']) camera.moveForward(speed, g_map);
+  if (g_keys['KeyS'] || g_keys['ArrowDown']) camera.moveBackward(speed, g_map);
   if (g_keys['KeyA']) camera.moveLeft(speed, g_map);
   if (g_keys['KeyD']) camera.moveRight(speed, g_map);
-  if (g_keys['KeyQ']) camera.panLeft(rotSpeed);
-  if (g_keys['KeyE']) camera.panRight(rotSpeed);
+  if (g_keys['KeyQ'] || g_keys['ArrowLeft']) camera.panLeft(rotSpeed);
+  if (g_keys['KeyE'] || g_keys['ArrowRight']) camera.panRight(rotSpeed);
+
+  // Update physics (gravity, jumping)
+  camera.updatePhysics(g_map);
 
   checkRatProximity();
 }
