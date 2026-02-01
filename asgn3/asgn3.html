@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assignment 3: Virtual World - Ashan Devine</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      text-align: center;
+      color: #00d4ff;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 20px;
+    }
+    #canvas-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .canvas-wrapper {
+      display: inline-block;
+      position: relative;
+    }
+    canvas {
+      border: 2px solid #00d4ff;
+      background-color: #000;
+      display: block;
+      cursor: crosshair;
+    }
+    #fps-display {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #0f0;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      z-index: 10;
+    }
+    #game-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #ff0;
+      padding: 20px 40px;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: bold;
+      z-index: 20;
+      display: none;
+    }
+    #game-message:not(:empty) {
+      display: block;
+    }
+    .controls {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #2a3a5e;
+      background-color: rgba(0, 50, 80, 0.2);
+    }
+    .controls h3 {
+      margin-top: 0;
+      color: #00d4ff;
+      border-bottom: 1px solid #2a3a5e;
+      padding-bottom: 8px;
+    }
+    .instructions ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin-bottom: 8px;
+    }
+    .key {
+      display: inline-block;
+      background-color: #333;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: monospace;
+      font-size: 14px;
+      margin: 0 2px;
+    }
+    .game-objective {
+      background-color: rgba(255, 200, 0, 0.1);
+      border-color: #ffc800;
+    }
+    .game-objective h3 {
+      color: #ffc800;
+    }
+  </style>
+</head>
+<body onload="main()">
+  <h1>CSE 160 Assignment 3: Virtual World</h1>
+  <p class="subtitle">By Ashan Devine - Minecraft-style Block World with Hidden Rat</p>
+
+  <div id="canvas-container">
+    <div class="canvas-wrapper">
+      <canvas id="webgl" width="600" height="400"></canvas>
+      <div id="fps-display">FPS: 0.0</div>
+      <div id="game-message"></div>
+    </div>
+  </div>
+
+  <div class="controls game-objective">
+    <h3>Game Objective: Find the Rat!</h3>
+    <p>A rat from Assignment 2 is hiding somewhere in the maze. Navigate through the world to find it. When you get close enough, you win!</p>
+  </div>
+
+  <div class="controls instructions">
+    <h3>Controls</h3>
+    <ul>
+      <li><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> - Move forward/left/backward/right</li>
+      <li><span class="key">Q</span> <span class="key">E</span> - Rotate camera left/right</li>
+      <li><strong>Mouse Drag:</strong> Click and drag to look around</li>
+      <li><strong>Left Click:</strong> Add a block in front of you</li>
+      <li><strong>Shift + Click</strong> or <strong>Right Click:</strong> Remove a block in front of you</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <h3>Rubric Checklist</h3>
+    <ul style="list-style-type: none; padding-left: 10px;">
+      <li>&#x2705; <strong>Sky & Ground (0.5):</strong> Sky cube with solid color, ground with grass texture</li>
+      <li>&#x2705; <strong>Basic Texture (1.0):</strong> UV coordinates and sampler2D shaders</li>
+      <li>&#x2705; <strong>Texture/Color Mix (0.5):</strong> u_whichTexture uniform selects mode</li>
+      <li>&#x2705; <strong>Perspective Camera (0.5):</strong> setPerspective + setLookAt</li>
+      <li>&#x2705; <strong>WASD Movement (1.0):</strong> Camera.moveForward/Back/Left/Right</li>
+      <li>&#x2705; <strong>QE Rotation (1.0):</strong> Camera.panLeft/Right</li>
+      <li>&#x2705; <strong>32x32 Map (1.5):</strong> g_map array with maze structure</li>
+      <li>&#x2705; <strong>Mouse Rotation (0.5):</strong> Click-drag camera look</li>
+      <li>&#x2705; <strong>Multiple Textures (1.0):</strong> Grass (ground), Brick (walls), Sky</li>
+      <li>&#x2705; <strong>Block Add/Delete (0.5):</strong> Click to add, Shift+Click to remove</li>
+      <li>&#x2705; <strong>Game/Story (1.0):</strong> "Find the Rat" objective</li>
+      <li>&#x2705; <strong>Performance (0.5):</strong> Static buffers, FPS display</li>
+      <li>&#x2705; <strong>Wow Factor (0.5):</strong> Animated rotating rat NPC</li>
+    </ul>
+  </div>
+
+  <!-- WebGL utility libraries -->
+  <script src="./lib/webgl-utils.js"></script>
+  <script src="./lib/webgl-debug.js"></script>
+  <script src="./lib/cuon-utils.js"></script>
+  <script src="./lib/cuon-matrix-cse160.js"></script>
+
+  <!-- Shape and Camera classes -->
+  <script src="Camera.js"></script>
+  <script src="Cube.js"></script>
+
+  <!-- Main application -->
+  <script src="World.js"></script>
+</body>
+</html>
