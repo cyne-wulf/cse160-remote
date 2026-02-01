@@ -452,22 +452,43 @@ function addBlock() {
 }
 
 function deleteBlock() {
-  // Calculate grid position in front of camera
+  // Calculate view direction
   var f = new Vector3();
   f.set(camera.at);
   f.sub(camera.eye);
   f.normalize();
 
-  var targetX = Math.floor(camera.eye.elements[0] + f.elements[0] * 3) + 16;
-  var targetZ = Math.floor(camera.eye.elements[2] + f.elements[2] * 3) + 16;
+  // Raycast up to 5 units to find the first block
+  // Start at 0.2 to avoid clipping self/camera
+  for (var t = 0.2; t < 5.0; t += 0.1) {
+    var checkPos = new Vector3();
+    checkPos.set(f);
+    checkPos.mul(t);
+    checkPos.add(camera.eye);
 
-  if (targetX >= 0 && targetX < 32 && targetZ >= 0 && targetZ < 32) {
-    if (g_map[targetX][targetZ] > 0) {
-      g_map[targetX][targetZ]--;
-      g_mapNeedsRebuild = true;  // Trigger geometry rebuild
-      console.log('Removed block at (' + targetX + ', ' + targetZ + '), height: ' + g_map[targetX][targetZ]);
+    var x = checkPos.elements[0];
+    var y = checkPos.elements[1];
+    var z = checkPos.elements[2];
+
+    var gridX = Math.floor(x) + 16;
+    var gridZ = Math.floor(z) + 16;
+
+    if (gridX >= 0 && gridX < 32 && gridZ >= 0 && gridZ < 32) {
+      // Get stack height at this grid position
+      var height = g_map[gridX][gridZ];
+      
+      // Check if ray is hitting the block stack
+      // Blocks go from y=-0.5 to height-0.5
+      // We check if point is within this vertical range
+      if (height > 0 && y < height && y > -0.5) {
+        g_map[gridX][gridZ]--;
+        g_mapNeedsRebuild = true;  // Trigger geometry rebuild
+        console.log('Removed block at (' + gridX + ', ' + gridZ + '), dist: ' + t.toFixed(2));
+        return; // Stop after removing one block
+      }
     }
   }
+  console.log('No block found to remove');
 }
 
 // ============================================================================
