@@ -90,6 +90,7 @@ var g_keys = {};
 var g_ratX = 0;
 var g_ratZ = 0;
 var g_ratFound = false;
+var g_score = 0;
 
 // Rotation matrices (reusable)
 var g_globalRotateMatrix = new Matrix4();
@@ -467,8 +468,22 @@ function checkRatProximity() {
 
   if (dist < 0.7) {  // Reduced from 2 - actual touch distance
     g_ratFound = true;
-    document.getElementById('game-message').textContent = 'You found the rat! Congratulations!';
-    document.getElementById('game-message').style.color = '#0f0';
+    g_score++;
+
+    // Update score display
+    document.getElementById('score-display').textContent = 'Score: ' + g_score;
+
+    // Show congratulations message
+    var messageEl = document.getElementById('game-message');
+    messageEl.textContent = 'You found the rat! +1 Score!';
+    messageEl.style.color = '#0f0';
+
+    // Hide message and respawn rat after 2 seconds
+    setTimeout(function() {
+      messageEl.textContent = '';
+      placeRat();
+      g_ratFound = false;
+    }, 2000);
   }
 }
 
@@ -624,6 +639,7 @@ const RAT_EAR_COLOR = [0.75, 0.6, 0.55, 1.0];
 const RAT_SNOUT_COLOR = [0.6, 0.55, 0.5, 1.0];
 const RAT_EYE_COLOR = [0.1, 0.1, 0.1, 1.0];
 const RAT_NOSE_COLOR = [0.2, 0.15, 0.15, 1.0];
+const RAT_TAIL_COLOR = [0.75, 0.65, 0.6, 1.0];  // Pinkish tail
 
 function drawRat() {
   if (g_ratFound) return;  // Don't draw if found
@@ -632,6 +648,7 @@ function drawRat() {
   var legSwing = 30 * Math.sin(g_seconds * 6);
   var headNod = 5 * Math.sin(g_seconds * 3);
   var bodyBob = 0.02 * Math.sin(g_seconds * 6);
+  var tailSwing = 20 * Math.sin(g_seconds * 4);  // Side-to-side sway
 
   // Base transform - position rat in world
   g_ratMatrix.setIdentity();
@@ -703,6 +720,40 @@ function drawRat() {
   drawRatLeg(0.18, 0.2, -legSwing);
   drawRatLeg(-0.18, -0.22, -legSwing);
   drawRatLeg(0.18, -0.22, legSwing);
+
+  // Tail - 3 segments for curved appearance
+  // Segment 1 (base)
+  g_ratPartMatrix.set(g_ratBodyMatrix);
+  g_ratPartMatrix.translate(0, 0, -0.35);
+  g_ratPartMatrix.rotate(tailSwing, 0, 1, 0);
+  g_ratPartMatrix.translate(0, 0, -0.12);
+  g_ratPartMatrix.scale(0.06, 0.06, 0.25);
+  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
+    g_ratPartMatrix, RAT_TAIL_COLOR, -2);
+
+  // Segment 2 (middle)
+  g_ratPartMatrix.set(g_ratBodyMatrix);
+  g_ratPartMatrix.translate(0, 0, -0.35);
+  g_ratPartMatrix.rotate(tailSwing, 0, 1, 0);
+  g_ratPartMatrix.translate(0, 0, -0.25);
+  g_ratPartMatrix.rotate(tailSwing * 0.5, 0, 1, 0);
+  g_ratPartMatrix.translate(0, 0, -0.1);
+  g_ratPartMatrix.scale(0.04, 0.04, 0.2);
+  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
+    g_ratPartMatrix, RAT_TAIL_COLOR, -2);
+
+  // Segment 3 (tip)
+  g_ratPartMatrix.set(g_ratBodyMatrix);
+  g_ratPartMatrix.translate(0, 0, -0.35);
+  g_ratPartMatrix.rotate(tailSwing, 0, 1, 0);
+  g_ratPartMatrix.translate(0, 0, -0.25);
+  g_ratPartMatrix.rotate(tailSwing * 0.5, 0, 1, 0);
+  g_ratPartMatrix.translate(0, 0, -0.2);
+  g_ratPartMatrix.rotate(tailSwing * 0.3, 0, 1, 0);
+  g_ratPartMatrix.translate(0, 0, -0.08);
+  g_ratPartMatrix.scale(0.025, 0.025, 0.15);
+  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
+    g_ratPartMatrix, RAT_TAIL_COLOR, -2);
 }
 
 function drawRatLeg(xOffset, zOffset, swing) {
