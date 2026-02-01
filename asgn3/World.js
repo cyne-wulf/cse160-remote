@@ -237,6 +237,21 @@ function sendProceduralTexture(texUnit, type) {
     gradient.addColorStop(1, '#87ceeb');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
+
+    // Add clouds
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    // Draw a few random clouds
+    for (var i = 0; i < 5; i++) {
+      var cx = Math.random() * size;
+      var cy = Math.random() * (size * 0.6); // Keep clouds in upper 60%
+      var scale = Math.random() * 0.5 + 0.8;
+      
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6 * scale, 0, Math.PI * 2);
+      ctx.arc(cx + 5 * scale, cy + 2 * scale, 5 * scale, 0, Math.PI * 2);
+      ctx.arc(cx - 5 * scale, cy + 2 * scale, 5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // Create texture from canvas
