@@ -526,13 +526,13 @@ function checkRatProximity() {
     
     if (!g_freePlay) {
       g_timeLeft += 10.0;
-    }
 
-    // High Score Logic
-    if (g_score > g_highScore) {
-      g_highScore = g_score;
-      localStorage.setItem('blockyWorldHighScore', g_highScore);
-      document.getElementById('highscore').textContent = g_highScore;
+      // High Score Logic
+      if (g_score > g_highScore) {
+        g_highScore = g_score;
+        localStorage.setItem('blockyWorldHighScore', g_highScore);
+        document.getElementById('highscore').textContent = g_highScore;
+      }
     }
 
     // Update score display
