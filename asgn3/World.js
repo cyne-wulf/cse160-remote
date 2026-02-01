@@ -814,6 +814,10 @@ function processInput() {
   var speed = 0.1;  // Per-frame speed (lower since called every frame)
   var rotSpeed = 2;
 
+  if (g_keys['ShiftLeft'] || g_keys['ShiftRight']) {
+    speed *= 3.0;
+  }
+
   if (g_keys['KeyW'] || g_keys['ArrowUp']) camera.moveForward(speed, g_map);
   if (g_keys['KeyS'] || g_keys['ArrowDown']) camera.moveBackward(speed, g_map);
   if (g_keys['KeyA']) camera.moveLeft(speed, g_map);
