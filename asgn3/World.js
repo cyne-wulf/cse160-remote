@@ -389,6 +389,10 @@ function setupKeyboard() {
       ev.preventDefault();
       camera.jump();
     }
+    // Prevent scrolling with arrow keys
+    if (ev.code === 'ArrowUp' || ev.code === 'ArrowDown') {
+      ev.preventDefault();
+    }
   };
   document.onkeyup = function(ev) {
     g_keys[ev.code] = false;
