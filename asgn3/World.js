@@ -92,6 +92,14 @@ var g_ratZ = 0;
 var g_ratFound = false;
 var g_score = 0;
 
+// Game State
+var g_timeLeft = 30.0;
+var g_gameActive = true;
+var g_gameStarted = false;
+var g_freePlay = false;
+var g_highScore = 0;
+var g_lastFrameTime = performance.now() / 1000;
+
 // Rotation matrices (reusable)
 var g_globalRotateMatrix = new Matrix4();
 
@@ -511,23 +519,41 @@ function checkRatProximity() {
   var dist = Math.sqrt(dx * dx + dz * dz);
 
   if (dist < 0.7) {  // Reduced from 2 - actual touch distance
+    if (!g_gameActive) return;
+
     g_ratFound = true;
     g_score++;
+    
+    if (!g_freePlay) {
+      g_timeLeft += 10.0;
+    }
+
+    // High Score Logic
+    if (g_score > g_highScore) {
+      g_highScore = g_score;
+      localStorage.setItem('blockyWorldHighScore', g_highScore);
+      document.getElementById('highscore').textContent = g_highScore;
+    }
 
     // Update score display
     document.getElementById('score-display').textContent = 'Score: ' + g_score;
 
     // Show congratulations message
     var messageEl = document.getElementById('game-message');
-    messageEl.textContent = 'You found the rat! +1 Score!';
+    messageEl.textContent = g_freePlay ? 'Rat Found!' : 'Rat Found! +10s';
     messageEl.style.color = '#0f0';
+    messageEl.style.border = 'none';
+    messageEl.style.display = 'block'; // Ensure visible
 
-    // Hide message and respawn rat after 2 seconds
+    // Hide message and respawn rat after 1 second
     setTimeout(function() {
-      messageEl.textContent = '';
+      if (g_gameActive) {
+         messageEl.textContent = '';
+         messageEl.style.display = 'none';
+      }
       placeRat();
       g_ratFound = false;
-    }, 2000);
+    }, 1000);
   }
 }
 
@@ -554,8 +580,30 @@ function updateFPS() {
 function renderScene() {
   updateFPS();
 
+  var currentTime = performance.now() / 1000;
+  var deltaTime = currentTime - g_lastFrameTime;
+  g_lastFrameTime = currentTime;
+
   // Update time
-  g_seconds = performance.now() / 1000 - g_startTime;
+  g_seconds = currentTime - g_startTime;
+
+  // Game Timer Logic
+  if (g_gameStarted && g_gameActive && !g_freePlay) {
+    g_timeLeft -= deltaTime;
+    if (g_timeLeft <= 0) {
+      g_timeLeft = 0;
+      g_gameActive = false;
+      // Game Over
+      var msg = document.getElementById('game-message');
+      msg.innerHTML = "GAME OVER<br>Score: " + g_score + 
+        "<br><button onclick='restartGame()'>Restart</button>" +
+        "<br><button onclick='startFreePlay()' style='margin-top:10px;background-color:#0aa;'>Free Play</button>";
+      msg.style.color = '#f00';
+      msg.style.display = 'block';
+      msg.style.border = '2px solid #f00';
+    }
+    document.getElementById('timer-display').textContent = 'Time: ' + g_timeLeft.toFixed(1);
+  }
 
   // Clear canvas
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -815,6 +863,8 @@ function drawRatLeg(xOffset, zOffset, swing) {
 // ============================================================================
 
 function processInput() {
+  if (!g_gameStarted) return;
+
   var speed = 0.1;  // Per-frame speed (lower since called every frame)
   var rotSpeed = 2;
 
@@ -826,8 +876,11 @@ function processInput() {
   if (g_keys['KeyS'] || g_keys['ArrowDown']) camera.moveBackward(speed, g_map);
   if (g_keys['KeyA']) camera.moveLeft(speed, g_map);
   if (g_keys['KeyD']) camera.moveRight(speed, g_map);
-  if (g_keys['KeyQ'] || g_keys['ArrowLeft']) camera.panLeft(rotSpeed);
-  if (g_keys['KeyE'] || g_keys['ArrowRight']) camera.panRight(rotSpeed);
+  if (g_keys['KeyQ'] || g_keys['ArrowLeft'] || g_keys['KeyJ']) camera.panLeft(rotSpeed);
+  if (g_keys['KeyE'] || g_keys['ArrowRight'] || g_keys['KeyL']) camera.panRight(rotSpeed);
+  
+  if (g_keys['KeyI']) camera.tilt(rotSpeed);
+  if (g_keys['KeyK']) camera.tilt(-rotSpeed);
 
   // Update physics (gravity, jumping)
   camera.updatePhysics(g_map);
@@ -842,10 +895,62 @@ function tick() {
 }
 
 // ============================================================================
+// Game State Management
+// ============================================================================
+
+function startGame(mode) {
+  g_gameStarted = true;
+  document.getElementById('start-screen').style.display = 'none';
+  
+  if (mode === 'free') {
+    startFreePlay();
+  } else {
+    restartGame(); // Starts challenge mode
+  }
+}
+window.startGame = startGame;
+
+function restartGame() {
+  g_score = 0;
+  g_timeLeft = 30.0;
+  g_gameActive = true;
+  g_freePlay = false;
+  g_ratFound = false;
+  
+  document.getElementById('score-display').textContent = 'Score: 0';
+  document.getElementById('timer-display').textContent = 'Time: 30.0';
+  document.getElementById('game-message').style.display = 'none';
+  
+  // Reset camera
+  camera.eye = new Vector3([0, 0.5, 3]);
+  camera.at = new Vector3([0, 0.5, -100]);
+  camera.yVelocity = 0;
+  camera.onGround = false;
+  
+  placeRat();
+}
+window.restartGame = restartGame;
+
+function startFreePlay() {
+  g_freePlay = true;
+  g_gameActive = true;
+  document.getElementById('game-message').style.display = 'none';
+  document.getElementById('timer-display').textContent = 'Free Play';
+}
+window.startFreePlay = startFreePlay;
+
+// ============================================================================
 // Main
 // ============================================================================
 
 function main() {
+  // Load High Score
+  var savedScore = localStorage.getItem('blockyWorldHighScore');
+  if (savedScore) {
+    g_highScore = parseInt(savedScore);
+    document.getElementById('highscore').textContent = g_highScore;
+  }
+
   if (!setupWebGL()) {
     return;
   }
