@@ -541,7 +541,7 @@ function drawSky() {
   g_skyMatrix.translate(0, 10, 0);
   g_skyMatrix.scale(200, 200, 200);
   drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_skyMatrix, [0.5, 0.7, 1.0, 1.0], -2);  // Solid sky blue color
+    g_skyMatrix, [1.0, 1.0, 1.0, 1.0], 2);  // Sky texture
 }
 
 function drawGround() {

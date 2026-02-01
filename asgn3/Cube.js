@@ -91,7 +91,7 @@ class Cube {
     gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(a_Position);
 
-    gl.drawArrays(gl.TRIANGULAR, 0, 36);
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
   }
 
   // Render with texture support
