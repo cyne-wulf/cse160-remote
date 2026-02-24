@@ -844,8 +844,7 @@ function drawRat() {
   g_ratBodyMatrix.translate(0, bodyBob, 0);
   g_ratPartMatrix.set(g_ratBodyMatrix);
   g_ratPartMatrix.scale(0.5, 0.3, 0.7);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_BODY_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_BODY_COLOR, -2);
 
   // Head - store base in g_ratHeadBase for face parts to reference
   g_ratHeadBase.set(g_ratBodyMatrix);
@@ -853,50 +852,43 @@ function drawRat() {
   g_ratHeadBase.rotate(headNod, 1, 0, 0);
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.scale(0.28, 0.24, 0.28);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_HEAD_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_HEAD_COLOR, -2);
 
   // Snout
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.translate(0, -0.02, 0.18);
   g_ratPartMatrix.scale(0.14, 0.1, 0.12);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_SNOUT_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_SNOUT_COLOR, -2);
 
   // Nose
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.translate(0, -0.02, 0.25);
   g_ratPartMatrix.scale(0.06, 0.05, 0.04);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_NOSE_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_NOSE_COLOR, -2);
 
   // Left Ear
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.translate(-0.12, 0.12, 0);
   g_ratPartMatrix.scale(0.08, 0.12, 0.04);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_EAR_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_EAR_COLOR, -2);
 
   // Right Ear
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.translate(0.12, 0.12, 0);
   g_ratPartMatrix.scale(0.08, 0.12, 0.04);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_EAR_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_EAR_COLOR, -2);
 
   // Left Eye
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.translate(-0.1, 0.04, 0.12);
   g_ratPartMatrix.scale(0.05, 0.05, 0.05);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_EYE_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_EYE_COLOR, -2);
 
   // Right Eye
   g_ratPartMatrix.set(g_ratHeadBase);
   g_ratPartMatrix.translate(0.1, 0.04, 0.12);
   g_ratPartMatrix.scale(0.05, 0.05, 0.05);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_EYE_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_EYE_COLOR, -2);
 
   // Legs (simplified - 4 legs)
   drawRatLeg(-0.18, 0.2, legSwing);
@@ -911,8 +903,7 @@ function drawRat() {
   g_ratPartMatrix.rotate(tailSwing, 0, 1, 0);
   g_ratPartMatrix.translate(0, 0, -0.12);
   g_ratPartMatrix.scale(0.06, 0.06, 0.25);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_TAIL_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_TAIL_COLOR, -2);
 
   // Segment 2 (middle)
   g_ratPartMatrix.set(g_ratBodyMatrix);
@@ -922,8 +913,7 @@ function drawRat() {
   g_ratPartMatrix.rotate(tailSwing * 0.5, 0, 1, 0);
   g_ratPartMatrix.translate(0, 0, -0.1);
   g_ratPartMatrix.scale(0.04, 0.04, 0.2);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_TAIL_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_TAIL_COLOR, -2);
 
   // Segment 3 (tip)
   g_ratPartMatrix.set(g_ratBodyMatrix);
@@ -935,8 +925,7 @@ function drawRat() {
   g_ratPartMatrix.rotate(tailSwing * 0.3, 0, 1, 0);
   g_ratPartMatrix.translate(0, 0, -0.08);
   g_ratPartMatrix.scale(0.025, 0.025, 0.15);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_TAIL_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_TAIL_COLOR, -2);
 }
 
 function drawRatLeg(xOffset, zOffset, swing) {
@@ -945,8 +934,7 @@ function drawRatLeg(xOffset, zOffset, swing) {
   g_ratPartMatrix.rotate(swing, 1, 0, 0);
   g_ratPartMatrix.translate(0, -0.06, 0);
   g_ratPartMatrix.scale(0.07, 0.12, 0.07);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_ratPartMatrix, RAT_LEG_COLOR, -2);
+  drawCubeWithNormals(g_ratPartMatrix, RAT_LEG_COLOR, -2);
 }
 
 // ============================================================================
