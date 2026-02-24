@@ -6,42 +6,110 @@
 // ============================================================================
 
 var VSHADER_SOURCE = `
-  attribute vec4 a_Position;
-  attribute vec2 a_UV;
-  uniform mat4 u_ModelMatrix;
-  uniform mat4 u_ViewMatrix;
-  uniform mat4 u_ProjectionMatrix;
-  uniform mat4 u_GlobalRotateMatrix;
-  varying vec2 v_UV;
-  void main() {
-    gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
-    v_UV = a_UV;
-  }
+attribute vec4 a_Position;
+attribute vec2 a_UV;
+attribute vec3 a_Normal;
+
+uniform mat4 u_ModelMatrix;
+uniform mat4 u_ViewMatrix;
+uniform mat4 u_ProjectionMatrix;
+uniform mat4 u_GlobalRotateMatrix;
+uniform mat4 u_NormalMatrix;
+
+varying vec2 v_UV;
+varying vec3 v_Normal;
+varying vec3 v_Position;
+
+void main() {
+  gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
+  v_UV = a_UV;
+  v_Position = vec3(u_ModelMatrix * a_Position);
+  v_Normal = normalize(vec3(u_NormalMatrix * vec4(a_Normal, 0.0)));
+}
 `;
 
 var FSHADER_SOURCE = `
-  precision mediump float;
-  uniform vec4 u_FragColor;
-  uniform sampler2D u_Sampler0;
-  uniform sampler2D u_Sampler1;
-  uniform sampler2D u_Sampler2;
-  uniform int u_whichTexture;
-  varying vec2 v_UV;
-  void main() {
-    if (u_whichTexture == -2) {
-      gl_FragColor = u_FragColor;                    // Solid color
-    } else if (u_whichTexture == -1) {
-      gl_FragColor = vec4(v_UV, 1.0, 1.0);           // Debug UV
-    } else if (u_whichTexture == 0) {
-      gl_FragColor = texture2D(u_Sampler0, v_UV);    // Texture 0 (grass/ground)
-    } else if (u_whichTexture == 1) {
-      gl_FragColor = texture2D(u_Sampler1, v_UV);    // Texture 1 (brick/wall)
-    } else if (u_whichTexture == 2) {
-      gl_FragColor = texture2D(u_Sampler2, v_UV);    // Texture 2 (sky)
-    } else {
-      gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);       // Error: magenta
+precision mediump float;
+
+uniform vec4 u_FragColor;
+uniform sampler2D u_Sampler0;
+uniform sampler2D u_Sampler1;
+uniform sampler2D u_Sampler2;
+uniform int u_whichTexture;
+
+varying vec2 v_UV;
+varying vec3 v_Normal;
+varying vec3 v_Position;
+
+uniform int u_ShowNormals;
+uniform int u_LightingOn;
+
+uniform int  u_LightOn;
+uniform vec3 u_LightPos;
+uniform vec3 u_LightColor;
+
+uniform int   u_SpotOn;
+uniform vec3  u_SpotPos;
+uniform vec3  u_SpotDir;
+uniform float u_SpotCutoff;
+uniform float u_SpotExponent;
+
+uniform vec3 u_CameraPos;
+
+void main() {
+  vec4 baseColor;
+  if (u_whichTexture == -2) {
+    baseColor = u_FragColor;
+  } else if (u_whichTexture == -1) {
+    baseColor = vec4(v_UV, 1.0, 1.0);
+  } else if (u_whichTexture == 0) {
+    baseColor = texture2D(u_Sampler0, v_UV);
+  } else if (u_whichTexture == 1) {
+    baseColor = texture2D(u_Sampler1, v_UV);
+  } else if (u_whichTexture == 2) {
+    baseColor = texture2D(u_Sampler2, v_UV);
+  } else {
+    baseColor = vec4(1.0, 0.0, 1.0, 1.0);
+  }
+
+  if (u_ShowNormals == 1) {
+    gl_FragColor = vec4(normalize(v_Normal) * 0.5 + 0.5, 1.0);
+    return;
+  }
+
+  if (u_LightingOn == 0) {
+    gl_FragColor = baseColor;
+    return;
+  }
+
+  vec3 N = normalize(v_Normal);
+  vec3 V = normalize(u_CameraPos - v_Position);
+
+  vec3 result = 0.2 * baseColor.rgb;
+
+  if (u_LightOn == 1) {
+    vec3 L = normalize(u_LightPos - v_Position);
+    float diff = max(dot(N, L), 0.0);
+    vec3 R = reflect(-L, N);
+    float spec = (diff > 0.0) ? pow(max(dot(R, V), 0.0), 32.0) : 0.0;
+    result += u_LightColor * (diff * baseColor.rgb + 0.5 * spec * vec3(1.0));
+  }
+
+  if (u_SpotOn == 1) {
+    vec3 L = normalize(u_SpotPos - v_Position);
+    vec3 D = normalize(-u_SpotDir);
+    float cosAngle = dot(D, L);
+    if (cosAngle >= u_SpotCutoff) {
+      float spotFactor = pow(cosAngle, u_SpotExponent);
+      float diff = max(dot(N, L), 0.0);
+      vec3 R = reflect(-L, N);
+      float spec = (diff > 0.0) ? pow(max(dot(R, V), 0.0), 32.0) : 0.0;
+      result += spotFactor * (diff * baseColor.rgb + 0.5 * spec * vec3(1.0));
     }
   }
+
+  gl_FragColor = vec4(result, baseColor.a);
+}
 `;
 
 // ============================================================================
@@ -61,6 +129,43 @@ var u_whichTexture;
 var u_Sampler0;
 var u_Sampler1;
 var u_Sampler2;
+
+// Lighting shader locations
+var a_Normal;
+var u_NormalMatrix;
+var u_ShowNormals;
+var u_LightingOn;
+
+// Point light uniforms
+var u_LightPos;
+var u_LightColor;
+var u_LightOn;
+
+// Spotlight uniforms
+var u_SpotPos;
+var u_SpotDir;
+var u_SpotCutoff;
+var u_SpotExponent;
+var u_SpotOn;
+
+// Camera position uniform
+var u_CameraPos;
+
+// Lighting state
+var g_lightingOn   = true;
+var g_showNormals  = false;
+var g_lightPos     = [5.0, 3.0, 0.0];
+var g_lightColor   = [1.0, 1.0, 1.0];
+var g_lightAngle   = 0.0;
+var g_lightOn      = true;
+
+// Spotlight state
+var g_spotPos      = [0.0, 8.0, 0.0];
+var g_spotDir      = [0.0, -1.0, 0.0];
+var g_spotCutoff   = Math.cos(20 * Math.PI / 180);
+var g_spotExponent = 15.0;
+var g_spotAngle    = 0.0;
+var g_spotOn       = true;
 
 // Camera
 var camera;
@@ -152,6 +257,38 @@ function connectVariablesToGLSL() {
   u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
   u_Sampler1 = gl.getUniformLocation(gl.program, 'u_Sampler1');
   u_Sampler2 = gl.getUniformLocation(gl.program, 'u_Sampler2');
+
+  // Lighting attribute and uniforms
+  a_Normal        = gl.getAttribLocation(gl.program,  'a_Normal');
+  u_NormalMatrix  = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
+  u_ShowNormals   = gl.getUniformLocation(gl.program, 'u_ShowNormals');
+  u_LightingOn    = gl.getUniformLocation(gl.program, 'u_LightingOn');
+  u_LightPos      = gl.getUniformLocation(gl.program, 'u_LightPos');
+  u_LightColor    = gl.getUniformLocation(gl.program, 'u_LightColor');
+  u_LightOn       = gl.getUniformLocation(gl.program, 'u_LightOn');
+  u_SpotPos       = gl.getUniformLocation(gl.program, 'u_SpotPos');
+  u_SpotDir       = gl.getUniformLocation(gl.program, 'u_SpotDir');
+  u_SpotCutoff    = gl.getUniformLocation(gl.program, 'u_SpotCutoff');
+  u_SpotExponent  = gl.getUniformLocation(gl.program, 'u_SpotExponent');
+  u_SpotOn        = gl.getUniformLocation(gl.program, 'u_SpotOn');
+  u_CameraPos     = gl.getUniformLocation(gl.program, 'u_CameraPos');
+
+  // Safe defaults — lighting off so existing render looks unchanged
+  gl.uniform1i(u_ShowNormals,  0);
+  gl.uniform1i(u_LightingOn,   0);
+  gl.uniform1i(u_LightOn,      0);
+  gl.uniform1i(u_SpotOn,       0);
+  gl.uniform3f(u_LightPos,     5.0, 3.0, 0.0);
+  gl.uniform3f(u_LightColor,   1.0, 1.0, 1.0);
+  gl.uniform3f(u_SpotPos,      0.0, 8.0, 0.0);
+  gl.uniform3f(u_SpotDir,      0.0, -1.0, 0.0);
+  gl.uniform1f(u_SpotCutoff,   0.940);
+  gl.uniform1f(u_SpotExponent, 15.0);
+  gl.uniform3f(u_CameraPos,    0.0, 0.5, 3.0);
+
+  // Default normal matrix = identity
+  var identityNM = new Matrix4();
+  gl.uniformMatrix4fv(u_NormalMatrix, false, identityNM.elements);
 
   // Set identity matrix as default model matrix
   var identityM = new Matrix4();
