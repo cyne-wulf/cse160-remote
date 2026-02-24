@@ -56,17 +56,23 @@ class Sphere {
   static createGLBuffers(gl) {
     Sphere.initGeometry(24, 12);
 
-    Sphere.vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, Sphere.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, Sphere.vertices, gl.STATIC_DRAW);
+    if (Sphere.vertexBuffer === null) {
+      Sphere.vertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, Sphere.vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, Sphere.vertices, gl.STATIC_DRAW);
+    }
 
-    Sphere.normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, Sphere.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, Sphere.normals, gl.STATIC_DRAW);
+    if (Sphere.normalBuffer === null) {
+      Sphere.normalBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, Sphere.normalBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, Sphere.normals, gl.STATIC_DRAW);
+    }
 
-    Sphere.uvBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, Sphere.uvBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, Sphere.uvCoords, gl.STATIC_DRAW);
+    if (Sphere.uvBuffer === null) {
+      Sphere.uvBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, Sphere.uvBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, Sphere.uvCoords, gl.STATIC_DRAW);
+    }
   }
 }
 
