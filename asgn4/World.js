@@ -192,6 +192,9 @@ var g_mouseLookEnabled = false;
 // Key states for smooth movement
 var g_keys = {};
 
+// Bunny model
+var g_bunny = null;
+
 // Rat position and state
 var g_ratX = 0;
 var g_ratZ = 0;
@@ -719,6 +722,7 @@ function renderScene() {
   drawSky();
   drawGround();
   drawSpheres();
+  drawBunny();
   drawMap();
   drawRat();
 }
@@ -971,6 +975,10 @@ function drawSpheres() {
   drawSphere(g_sphereMatrix, [0.2, 0.6, 1.0, 1.0], -2);
 }
 
+function drawBunny() {
+  if (g_bunny) g_bunny.render();
+}
+
 // ============================================================================
 // Animation Loop
 // ============================================================================
@@ -1024,6 +1032,15 @@ function main() {
   // Create static buffers
   Cube.createGLBuffers(gl);
   Sphere.createGLBuffers(gl);
+
+  g_bunny = new Model();
+  g_bunny.loadOBJ(gl, 'bunny.obj');
+  g_bunny.color = [0.8, 0.75, 0.7, 1.0];
+
+  // The bunny OBJ is large (y ~0 to ~4) — scale down and position it
+  g_bunny.matrix.setIdentity();
+  g_bunny.matrix.translate(5.0, -0.5, 5.0);
+  g_bunny.matrix.scale(0.15, 0.15, 0.15);
 
   // Initialize map
   initMap();
