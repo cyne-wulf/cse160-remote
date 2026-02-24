@@ -1032,6 +1032,9 @@ function drawLightMarker() {
   g_lightMarkerMatrix.scale(0.15, 0.15, 0.15);
   drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
     g_lightMarkerMatrix, [0.0, 0.5, 1.0, 1.0], -2);
+
+  // Restore lighting state for any draw calls that follow
+  gl.uniform1i(u_LightingOn, g_lightingOn ? 1 : 0);
 }
 
 // ============================================================================
