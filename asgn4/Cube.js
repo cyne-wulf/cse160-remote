@@ -17,6 +17,10 @@ class Cube {
   static uvCoords = null;
   static uvBuffer = null;
 
+  // Per-face normals for Phong lighting
+  static normals = null;
+  static normalBuffer = null;
+
   static initVertices() {
     if (Cube.vertices !== null) return;
 
@@ -56,6 +60,21 @@ class Cube {
       // Left face
       0,0, 1,0, 1,1,  0,0, 1,1, 0,1,
     ]);
+
+    Cube.normals = new Float32Array([
+      // Front face (z = +0.5): normal = (0, 0, 1) × 6
+       0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
+      // Back face (z = -0.5): normal = (0, 0, -1) × 6
+       0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,
+      // Top face (y = +0.5): normal = (0, 1, 0) × 6
+       0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
+      // Bottom face (y = -0.5): normal = (0, -1, 0) × 6
+       0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,
+      // Right face (x = +0.5): normal = (1, 0, 0) × 6
+       1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
+      // Left face (x = -0.5): normal = (-1, 0, 0) × 6
+      -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+    ]);
   }
 
   static createGLBuffers(gl) {
@@ -79,6 +98,16 @@ class Cube {
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, Cube.uvBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, Cube.uvCoords, gl.STATIC_DRAW);
+    }
+
+    if (Cube.normalBuffer === null) {
+      Cube.normalBuffer = gl.createBuffer();
+      if (!Cube.normalBuffer) {
+        console.log('Failed to create cube normal buffer');
+        return;
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, Cube.normalBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, Cube.normals, gl.STATIC_DRAW);
     }
   }
 
@@ -188,4 +217,36 @@ function drawCubeWithLighting(gl, a_Position, u_ModelMatrix, u_FragColor, matrix
     // Draw 6 vertices for this face
     gl.drawArrays(gl.TRIANGLES, i * 6, 6);
   }
+}
+
+// Draw a cube with full Phong lighting support.
+// Binds normals buffer and sets u_NormalMatrix (inverse-transpose of model matrix).
+// Use this for all lit scene objects. Use drawCubeTextured() only for unlit objects (sky, markers).
+function drawCubeWithNormals(matrix, color, textureNum) {
+  gl.uniform1i(u_whichTexture, textureNum);
+  gl.uniform4f(u_FragColor, color[0], color[1], color[2], color[3]);
+  gl.uniformMatrix4fv(u_ModelMatrix, false, matrix.elements);
+
+  // Normal matrix = inverse-transpose of model matrix (corrects normal direction for non-uniform scale)
+  var normalMatrix = new Matrix4();
+  normalMatrix.setInverseOf(matrix);
+  normalMatrix.transpose();
+  gl.uniformMatrix4fv(u_NormalMatrix, false, normalMatrix.elements);
+
+  // Positions
+  gl.bindBuffer(gl.ARRAY_BUFFER, Cube.vertexBuffer);
+  gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(a_Position);
+
+  // UVs
+  gl.bindBuffer(gl.ARRAY_BUFFER, Cube.uvBuffer);
+  gl.vertexAttribPointer(a_UV, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(a_UV);
+
+  // Normals
+  gl.bindBuffer(gl.ARRAY_BUFFER, Cube.normalBuffer);
+  gl.vertexAttribPointer(a_Normal, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(a_Normal);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
