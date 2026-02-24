@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assignment 4: Phong Lighting — Ashan Devine</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #1a1a2e;
+        color: #eee;
+      }
+      h1 {
+        text-align: center;
+        color: #00d4ff;
+        margin-bottom: 5px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #888;
+        margin-bottom: 20px;
+      }
+      #canvas-container {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .canvas-wrapper {
+        display: inline-block;
+        position: relative;
+      }
+      canvas {
+        border: 2px solid #00d4ff;
+        background-color: #000;
+        display: block;
+        cursor: crosshair;
+      }
+      #fps-display {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #0f0;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+        z-index: 10;
+      }
+      .controls {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #2a3a5e;
+        background-color: rgba(0, 50, 80, 0.2);
+      }
+      .controls h3 {
+        margin-top: 0;
+        color: #00d4ff;
+        border-bottom: 1px solid #2a3a5e;
+        padding-bottom: 8px;
+      }
+      .controls button {
+        padding: 6px 14px;
+        margin: 4px 4px 4px 0;
+        font-size: 14px;
+        cursor: pointer;
+        background-color: #0a2a4a;
+        border: 1px solid #00d4ff;
+        color: #eee;
+        border-radius: 4px;
+        transition: background-color 0.15s;
+      }
+      .controls button:hover {
+        background-color: #0055aa;
+      }
+      .controls label {
+        display: inline-block;
+        margin-right: 12px;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+      .controls input[type="range"] {
+        vertical-align: middle;
+        width: 120px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .instructions li {
+        margin-bottom: 8px;
+      }
+      .key {
+        display: inline-block;
+        background-color: #333;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-family: monospace;
+        font-size: 14px;
+        margin: 0 2px;
+      }
+    </style>
+  </head>
+  <body onload="main()">
+    <h1>CSE 160 Assignment 4: Phong Lighting</h1>
+    <p class="subtitle">
+      By Ashan Devine (atdevine@ucsc.edu)
+    </p>
+
+    <div id="canvas-container">
+      <div class="canvas-wrapper">
+        <canvas id="webgl" width="800" height="400"></canvas>
+        <div id="fps-display">FPS: 0.0</div>
+      </div>
+    </div>
+
+    <div class="controls" id="lighting-controls">
+      <h3>Lighting Controls</h3>
+      <button id="btn-lighting">Lighting: ON</button>
+      <button id="btn-normals">Show Normals: OFF</button>
+      <button id="btn-point-light">Point Light: ON</button>
+      <button id="btn-spotlight">Spotlight: ON</button>
+      <br><br>
+      <label>Light X Position: <input type="range" id="slider-light-x" min="-10" max="10" value="5" step="0.1"></label>
+      <br>
+      <label>Light Color R: <input type="range" id="slider-light-r" min="0" max="255" value="255"></label>
+      <label>G: <input type="range" id="slider-light-g" min="0" max="255" value="255"></label>
+      <label>B: <input type="range" id="slider-light-b" min="0" max="255" value="255"></label>
+      <br>
+      <label>Spotlight Angle: <input type="range" id="slider-spot-angle" min="0" max="360" value="0" step="1"></label>
+    </div>
+
+    <div class="controls instructions">
+      <h3>Camera Controls</h3>
+      <ul>
+        <li>
+          <span class="key">W</span> <span class="key">A</span>
+          <span class="key">S</span> <span class="key">D</span> or
+          <span class="key">Arrows</span> - Move forward/backward/left/right
+        </li>
+        <li><span class="key">Space</span> - Jump</li>
+        <li><span class="key">Shift</span> - Sprint</li>
+        <li>
+          <span class="key">Q</span> <span class="key">E</span> - Rotate camera
+          left/right
+        </li>
+        <li><strong>Mouse Drag:</strong> Click and drag to look around</li>
+        <li><strong>Right Click:</strong> Add a block in front of you</li>
+        <li>
+          <strong>Shift + Right Click:</strong> Remove a block from in front of
+          you
+        </li>
+        <li>
+          <span class="key">I</span> <span class="key">J</span>
+          <span class="key">K</span> <span class="key">L</span> - Pan camera
+          up/down/left/right
+        </li>
+      </ul>
+    </div>
+
+    <!-- WebGL utility libraries -->
+    <script src="./lib/webgl-utils.js"></script>
+    <script src="./lib/webgl-debug.js"></script>
+    <script src="./lib/cuon-utils.js"></script>
+    <script src="./lib/cuon-matrix-cse160.js"></script>
+
+    <!-- Shape and Camera classes -->
+    <script src="Camera.js"></script>
+    <script src="Cube.js"></script>
+    <script src="Sphere.js"></script>
+    <script src="Model.js"></script>
+
+    <!-- Main application -->
+    <script src="World.js"></script>
+  </body>
+</html>
