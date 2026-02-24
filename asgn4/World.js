@@ -1144,6 +1144,10 @@ function main() {
     g_lightAngle = parseFloat(this.value) * 18; // -10 to 10 maps to -180 to 180 degrees
   });
 
+  document.getElementById('slider-spot-angle').addEventListener('input', function() {
+    g_spotAngle = parseFloat(this.value);
+  });
+
   // Initialize FPS tracking
   g_lastFPSUpdate = performance.now() / 1000;
 
