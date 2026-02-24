@@ -202,6 +202,7 @@ var g_globalRotateMatrix = new Matrix4();
 
 // Reusable matrices for performance (avoid allocations in render loop)
 var g_blockMatrix = new Matrix4();
+var g_sphereMatrix = new Matrix4();
 var g_skyMatrix = new Matrix4();
 var g_groundMatrix = new Matrix4();
 var g_ratMatrix = new Matrix4();
@@ -715,6 +716,7 @@ function renderScene() {
   // Draw world
   drawSky();
   drawGround();
+  drawSpheres();
   drawMap();
   drawRat();
 }
@@ -937,6 +939,20 @@ function drawRatLeg(xOffset, zOffset, swing) {
   drawCubeWithNormals(g_ratPartMatrix, RAT_LEG_COLOR, -2);
 }
 
+function drawSpheres() {
+  // Sphere 1: white, near center
+  g_sphereMatrix.setIdentity();
+  g_sphereMatrix.translate(3.0, 0.5, 3.0);
+  g_sphereMatrix.scale(0.8, 0.8, 0.8);
+  drawSphere(g_sphereMatrix, [1.0, 1.0, 1.0, 1.0], -2);
+
+  // Sphere 2: colored, offset
+  g_sphereMatrix.setIdentity();
+  g_sphereMatrix.translate(-3.0, 0.5, -3.0);
+  g_sphereMatrix.scale(0.6, 0.6, 0.6);
+  drawSphere(g_sphereMatrix, [0.2, 0.6, 1.0, 1.0], -2);
+}
+
 // ============================================================================
 // Animation Loop
 // ============================================================================
@@ -989,6 +1005,7 @@ function main() {
 
   // Create static buffers
   Cube.createGLBuffers(gl);
+  Sphere.createGLBuffers(gl);
 
   // Initialize map
   initMap();
