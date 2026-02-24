@@ -200,6 +200,9 @@ var g_ratX = 0;
 var g_ratZ = 0;
 var g_ratFound = false;
 
+// Light marker matrix
+var g_lightMarkerMatrix = new Matrix4();
+
 // Rotation matrices (reusable)
 var g_globalRotateMatrix = new Matrix4();
 
@@ -696,6 +699,24 @@ function renderScene() {
   // Clear canvas
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+  // Animate point light — orbit on XZ plane at height 3
+  var lightRadius = 5.0;
+  g_lightAngle += 0.5;
+  var lightRad = g_lightAngle * Math.PI / 180;
+  g_lightPos[0] = lightRadius * Math.cos(lightRad);
+  g_lightPos[1] = 3.0;
+  g_lightPos[2] = lightRadius * Math.sin(lightRad);
+
+  // Spotlight orbits at different speed
+  g_spotAngle += 0.3;
+  var spotRad = g_spotAngle * Math.PI / 180;
+  g_spotPos[0] = 4.0 * Math.cos(spotRad);
+  g_spotPos[1] = 8.0;
+  g_spotPos[2] = 4.0 * Math.sin(spotRad);
+  g_spotDir[0] = -g_spotPos[0];
+  g_spotDir[1] = -2.0;
+  g_spotDir[2] = -g_spotPos[2];
+
   // Pass per-frame lighting flags
   gl.uniform1i(u_ShowNormals, g_showNormals ? 1 : 0);
   gl.uniform1i(u_LightingOn,  g_lightingOn  ? 1 : 0);
@@ -705,6 +726,16 @@ function renderScene() {
     camera.eye.elements[0],
     camera.eye.elements[1],
     camera.eye.elements[2]);
+
+  // Pass light state to shader
+  gl.uniform3fv(u_LightPos,    g_lightPos);
+  gl.uniform3fv(u_LightColor,  g_lightColor);
+  gl.uniform1i(u_LightOn,      g_lightOn   ? 1 : 0);
+  gl.uniform3fv(u_SpotPos,     g_spotPos);
+  gl.uniform3fv(u_SpotDir,     g_spotDir);
+  gl.uniform1f(u_SpotCutoff,   g_spotCutoff);
+  gl.uniform1f(u_SpotExponent, g_spotExponent);
+  gl.uniform1i(u_SpotOn,       g_spotOn    ? 1 : 0);
 
   // Set projection matrix
   var projMatrix = camera.getProjectionMatrix(canvas);
@@ -718,13 +749,20 @@ function renderScene() {
   g_globalRotateMatrix.setIdentity();
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, g_globalRotateMatrix.elements);
 
-  // Draw world
+  // Sky is never lit
+  gl.uniform1i(u_LightingOn, 0);
   drawSky();
+
+  // Everything else respects the user's lighting toggle
+  gl.uniform1i(u_LightingOn, g_lightingOn ? 1 : 0);
   drawGround();
   drawSpheres();
   drawBunny();
   drawMap();
   drawRat();
+
+  // Light markers: always unlit (handled inside drawLightMarker)
+  drawLightMarker();
 }
 
 function drawSky() {
@@ -979,6 +1017,23 @@ function drawBunny() {
   if (g_bunny) g_bunny.render();
 }
 
+function drawLightMarker() {
+  // Markers are always unlit regardless of global lighting toggle
+  gl.uniform1i(u_LightingOn, 0);
+
+  g_lightMarkerMatrix.setIdentity();
+  g_lightMarkerMatrix.translate(g_lightPos[0], g_lightPos[1], g_lightPos[2]);
+  g_lightMarkerMatrix.scale(0.15, 0.15, 0.15);
+  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
+    g_lightMarkerMatrix, [1.0, 1.0, 0.0, 1.0], -2);
+
+  g_lightMarkerMatrix.setIdentity();
+  g_lightMarkerMatrix.translate(g_spotPos[0], g_spotPos[1], g_spotPos[2]);
+  g_lightMarkerMatrix.scale(0.15, 0.15, 0.15);
+  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
+    g_lightMarkerMatrix, [0.0, 0.5, 1.0, 1.0], -2);
+}
+
 // ============================================================================
 // Animation Loop
 // ============================================================================
@@ -1060,6 +1115,30 @@ function main() {
   document.getElementById('btn-lighting').addEventListener('click', function() {
     g_lightingOn = !g_lightingOn;
     this.textContent = 'Lighting: ' + (g_lightingOn ? 'ON' : 'OFF');
+  });
+
+  document.getElementById('btn-point-light').addEventListener('click', function() {
+    g_lightOn = !g_lightOn;
+    this.textContent = 'Point Light: ' + (g_lightOn ? 'ON' : 'OFF');
+  });
+  document.getElementById('btn-spotlight').addEventListener('click', function() {
+    g_spotOn = !g_spotOn;
+    this.textContent = 'Spotlight: ' + (g_spotOn ? 'ON' : 'OFF');
+  });
+
+  function updateLightColor() {
+    var r = document.getElementById('slider-light-r').value / 255;
+    var g_r = document.getElementById('slider-light-g').value / 255;
+    var b = document.getElementById('slider-light-b').value / 255;
+    g_lightColor = [r, g_r, b];
+  }
+
+  document.getElementById('slider-light-r').addEventListener('input', updateLightColor);
+  document.getElementById('slider-light-g').addEventListener('input', updateLightColor);
+  document.getElementById('slider-light-b').addEventListener('input', updateLightColor);
+
+  document.getElementById('slider-light-x').addEventListener('input', function() {
+    g_lightAngle = parseFloat(this.value) * 18; // -10 to 10 maps to -180 to 180 degrees
   });
 
   // Initialize FPS tracking
