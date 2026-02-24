@@ -690,6 +690,16 @@ function renderScene() {
   // Clear canvas
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+  // Pass per-frame lighting flags
+  gl.uniform1i(u_ShowNormals, g_showNormals ? 1 : 0);
+  gl.uniform1i(u_LightingOn,  g_lightingOn  ? 1 : 0);
+
+  // Pass camera position for specular
+  gl.uniform3f(u_CameraPos,
+    camera.eye.elements[0],
+    camera.eye.elements[1],
+    camera.eye.elements[2]);
+
   // Set projection matrix
   var projMatrix = camera.getProjectionMatrix(canvas);
   gl.uniformMatrix4fv(u_ProjectionMatrix, false, projMatrix.elements);
@@ -723,8 +733,7 @@ function drawGround() {
   g_groundMatrix.setIdentity();
   g_groundMatrix.translate(0, -0.5, 0);
   g_groundMatrix.scale(32, 0.1, 32);
-  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
-    g_groundMatrix, [0.3, 0.6, 0.3, 1.0], 0);  // Grass texture
+  drawCubeWithNormals(g_groundMatrix, [0.3, 0.6, 0.3, 1.0], 0);
 }
 
 // Build batched geometry for all map blocks
@@ -1002,6 +1011,16 @@ function main() {
   // Setup input
   setupKeyboard();
   setupMouse();
+
+  // Wire up lighting control buttons
+  document.getElementById('btn-normals').addEventListener('click', function() {
+    g_showNormals = !g_showNormals;
+    this.textContent = 'Show Normals: ' + (g_showNormals ? 'ON' : 'OFF');
+  });
+  document.getElementById('btn-lighting').addEventListener('click', function() {
+    g_lightingOn = !g_lightingOn;
+    this.textContent = 'Lighting: ' + (g_lightingOn ? 'ON' : 'OFF');
+  });
 
   // Initialize FPS tracking
   g_lastFPSUpdate = performance.now() / 1000;
