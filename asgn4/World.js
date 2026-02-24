@@ -217,6 +217,8 @@ var g_mapVertexBuffer = null;  // WebGL buffer
 var g_mapUVBuffer = null;      // WebGL buffer
 var g_mapVertexCount = 0;      // Number of vertices to draw
 var g_mapNeedsRebuild = true;  // Flag to rebuild when blocks change
+var g_mapNormals      = null;
+var g_mapNormalBuffer = null;
 
 // ============================================================================
 // Setup Functions
@@ -751,8 +753,9 @@ function buildMapGeometry() {
   var vertexCount = cubeCount * 36;
   g_mapVertices = new Float32Array(vertexCount * 3);
   g_mapUVs = new Float32Array(vertexCount * 2);
+  g_mapNormals = new Float32Array(vertexCount * 3);
 
-  var vIdx = 0, uvIdx = 0;
+  var vIdx = 0, uvIdx = 0, nIdx = 0;
   for (var x = 0; x < 32; x++) {
     for (var z = 0; z < 32; z++) {
       var height = g_map[x][z];
@@ -764,6 +767,9 @@ function buildMapGeometry() {
           g_mapVertices[vIdx++] = Cube.vertices[i*3+2] + (z - 16);
           g_mapUVs[uvIdx++] = Cube.uvCoords[i*2];
           g_mapUVs[uvIdx++] = Cube.uvCoords[i*2+1];
+          g_mapNormals[nIdx++] = Cube.normals[i*3];
+          g_mapNormals[nIdx++] = Cube.normals[i*3 + 1];
+          g_mapNormals[nIdx++] = Cube.normals[i*3 + 2];
         }
       }
     }
@@ -780,6 +786,10 @@ function buildMapGeometry() {
   gl.bufferData(gl.ARRAY_BUFFER, g_mapVertices, gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, g_mapUVBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, g_mapUVs, gl.DYNAMIC_DRAW);
+
+  if (!g_mapNormalBuffer) g_mapNormalBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, g_mapNormalBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, g_mapNormals, gl.DYNAMIC_DRAW);
 
   g_mapNeedsRebuild = false;
   console.log('Map geometry rebuilt: ' + cubeCount + ' cubes, ' + vertexCount + ' vertices');
@@ -806,6 +816,14 @@ function drawMap() {
   gl.bindBuffer(gl.ARRAY_BUFFER, g_mapUVBuffer);
   gl.vertexAttribPointer(a_UV, 2, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(a_UV);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, g_mapNormalBuffer);
+  gl.vertexAttribPointer(a_Normal, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(a_Normal);
+
+  // Map blocks use identity model matrix, so normal matrix = identity
+  var identityM = new Matrix4();
+  gl.uniformMatrix4fv(u_NormalMatrix, false, identityM.elements);
 
   // Single draw call for entire map!
   gl.drawArrays(gl.TRIANGLES, 0, g_mapVertexCount);
