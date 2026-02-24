@@ -275,7 +275,7 @@ function connectVariablesToGLSL() {
 
   // Safe defaults — lighting off so existing render looks unchanged
   gl.uniform1i(u_ShowNormals,  0);
-  gl.uniform1i(u_LightingOn,   0);
+  gl.uniform1i(u_LightingOn,   1);
   gl.uniform1i(u_LightOn,      0);
   gl.uniform1i(u_SpotOn,       0);
   gl.uniform3f(u_LightPos,     5.0, 3.0, 0.0);
