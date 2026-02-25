@@ -55,6 +55,9 @@ uniform float u_SpotCutoff;
 uniform float u_SpotExponent;
 
 uniform vec3 u_CameraPos;
+uniform int  u_FloodOn;
+uniform vec3 u_FloodDir;
+uniform float u_FloodIntensity;
 
 void main() {
   vec4 baseColor;
@@ -85,7 +88,7 @@ void main() {
   vec3 N = normalize(v_Normal);
   vec3 V = normalize(u_CameraPos - v_Position);
 
-  vec3 result = 0.2 * baseColor.rgb;
+  vec3 result = 0.05 * baseColor.rgb;
 
   if (u_LightOn == 1) {
     vec3 L = normalize(u_LightPos - v_Position);
@@ -108,6 +111,15 @@ void main() {
     }
   }
 
+  if (u_FloodOn == 1) {
+    vec3 Lf = normalize(-u_FloodDir);
+    float diffF = max(dot(N, Lf), 0.0);
+    vec3 Rf = reflect(-Lf, N);
+    float specF = (diffF > 0.0) ? pow(max(dot(Rf, V), 0.0), 20.0) : 0.0;
+    result += u_FloodIntensity * (0.15 * baseColor.rgb + diffF * baseColor.rgb + 0.25 * specF * vec3(1.0));
+  }
+
+  result = clamp(result, 0.0, 1.0);
   gl_FragColor = vec4(result, baseColor.a);
 }
 `;
@@ -150,6 +162,9 @@ var u_SpotOn;
 
 // Camera position uniform
 var u_CameraPos;
+var u_FloodOn;
+var u_FloodDir;
+var u_FloodIntensity;
 
 // Lighting state
 var g_lightingOn   = true;
@@ -164,8 +179,16 @@ var g_spotPos      = [0.0, 8.0, 0.0];
 var g_spotDir      = [0.0, -1.0, 0.0];
 var g_spotCutoff   = Math.cos(20 * Math.PI / 180);
 var g_spotExponent = 15.0;
-var g_spotAngle    = 0.0;
+var g_spotAngle    = 315.0;
 var g_spotOn       = true;
+var g_spotTarget   = [0.0, 0.2, 0.0];  // Aim at bunny's location by default
+var g_spotRadius   = 12.0;
+var g_spotHeight   = 4.5;
+
+// Floodlight state
+var g_floodOn        = true;
+var g_floodDir       = [0.0, -1.0, 0.0];
+var g_floodIntensity = 0.0;
 
 // Camera
 var camera;
@@ -184,7 +207,9 @@ var g_startTime = performance.now() / 1000;
 var g_frameCount = 0;
 var g_lastFPSUpdate = 0;
 var g_currentFPS = 0;
-var g_lastFrameTime = performance.now() / 1000;
+var g_autoLightOrbit = true;
+var g_lastFrameTimeSeconds = null;
+var g_deltaTime = 0;
 
 // Mouse look state
 var g_mouseLookEnabled = false;
@@ -192,8 +217,24 @@ var g_mouseLookEnabled = false;
 // Key states for smooth movement
 var g_keys = {};
 
-// Bunny model
+// Bunny models
 var g_bunny = null;
+var g_floatingBunny = null;
+var g_floatingBunnyAnchor = { x: 1.25, y: -0.2, z: -0.65 };  // Near center, slightly offset
+var g_floatingBunnyScale = 0.12;
+var g_floatingBunnyBobAmplitude = 0.12;
+var g_floatingBunnyBobSpeed = 2.4;
+var g_floatingBunnySpinSpeed = 40;
+
+function updateSpotlightPosition() {
+  var rad = g_spotAngle * Math.PI / 180;
+  g_spotPos[0] = g_spotTarget[0] + g_spotRadius * Math.cos(rad);
+  g_spotPos[1] = g_spotHeight;
+  g_spotPos[2] = g_spotTarget[2] + g_spotRadius * Math.sin(rad);
+  g_spotDir[0] = g_spotTarget[0] - g_spotPos[0];
+  g_spotDir[1] = g_spotTarget[1] - g_spotPos[1];
+  g_spotDir[2] = g_spotTarget[2] - g_spotPos[2];
+}
 
 // Rat position and state
 var g_ratX = 0;
@@ -215,6 +256,7 @@ var g_ratMatrix = new Matrix4();
 var g_ratBodyMatrix = new Matrix4();
 var g_ratHeadBase = new Matrix4();
 var g_ratPartMatrix = new Matrix4();
+var g_floodPanelMatrix = new Matrix4();
 
 // Batched map geometry for performance
 var g_mapVertices = null;      // Float32Array of all block vertices
@@ -225,6 +267,9 @@ var g_mapVertexCount = 0;      // Number of vertices to draw
 var g_mapNeedsRebuild = true;  // Flag to rebuild when blocks change
 var g_mapNormals      = null;
 var g_mapNormalBuffer = null;
+var g_dirtyColumns    = new Set();
+var g_columnMeshes    = {};
+var g_columnOrder     = [];
 
 // ============================================================================
 // Setup Functions
@@ -281,6 +326,9 @@ function connectVariablesToGLSL() {
   u_SpotExponent  = gl.getUniformLocation(gl.program, 'u_SpotExponent');
   u_SpotOn        = gl.getUniformLocation(gl.program, 'u_SpotOn');
   u_CameraPos     = gl.getUniformLocation(gl.program, 'u_CameraPos');
+  u_FloodOn       = gl.getUniformLocation(gl.program, 'u_FloodOn');
+  u_FloodDir      = gl.getUniformLocation(gl.program, 'u_FloodDir');
+  u_FloodIntensity= gl.getUniformLocation(gl.program, 'u_FloodIntensity');
 
   // Safe defaults — lighting off so existing render looks unchanged
   gl.uniform1i(u_ShowNormals,  0);
@@ -294,6 +342,9 @@ function connectVariablesToGLSL() {
   gl.uniform1f(u_SpotCutoff,   0.940);
   gl.uniform1f(u_SpotExponent, 15.0);
   gl.uniform3f(u_CameraPos,    0.0, 0.5, 3.0);
+  gl.uniform1i(u_FloodOn,      1);
+  gl.uniform3f(u_FloodDir,     g_floodDir[0], g_floodDir[1], g_floodDir[2]);
+  gl.uniform1f(u_FloodIntensity, g_floodIntensity);
 
   // Default normal matrix = identity
   var identityNM = new Matrix4();
@@ -504,6 +555,11 @@ function initMap() {
 
   // Place the rat in a random location (empty spot)
   placeRat();
+
+  g_mapNeedsRebuild = true;
+  g_dirtyColumns.clear();
+  g_columnMeshes = {};
+  g_columnOrder = [];
 }
 
 function placeRat() {
@@ -528,6 +584,11 @@ function placeRat() {
 // Input Handling
 // ============================================================================
 
+function resetContinuousInput() {
+  g_keys = {};
+  g_mouseLookEnabled = false;
+}
+
 function setupKeyboard() {
   document.onkeydown = function(ev) {
     g_keys[ev.code] = true;
@@ -543,6 +604,7 @@ function setupKeyboard() {
   document.onkeyup = function(ev) {
     g_keys[ev.code] = false;
   };
+  window.addEventListener('blur', resetContinuousInput);
 }
 
 function setupMouse() {
@@ -586,6 +648,14 @@ function setupMouse() {
 // Block Manipulation
 // ============================================================================
 
+function columnKey(x, z) {
+  return x + ':' + z;
+}
+
+function markColumnDirty(x, z) {
+  g_dirtyColumns.add(columnKey(x, z));
+}
+
 function addBlock() {
   // Calculate grid position in front of camera
   var f = new Vector3();
@@ -599,7 +669,7 @@ function addBlock() {
   if (targetX >= 0 && targetX < 32 && targetZ >= 0 && targetZ < 32) {
     if (g_map[targetX][targetZ] < 5) {
       g_map[targetX][targetZ]++;
-      g_mapNeedsRebuild = true;  // Trigger geometry rebuild
+      markColumnDirty(targetX, targetZ);
       console.log('Added block at (' + targetX + ', ' + targetZ + '), height: ' + g_map[targetX][targetZ]);
     }
   }
@@ -636,7 +706,7 @@ function deleteBlock() {
       // We check if point is within this vertical range
       if (height > 0 && y < height && y > -0.5) {
         g_map[gridX][gridZ]--;
-        g_mapNeedsRebuild = true;  // Trigger geometry rebuild
+        markColumnDirty(gridX, gridZ);
         console.log('Removed block at (' + gridX + ', ' + gridZ + '), dist: ' + t.toFixed(2));
         return; // Stop after removing one block
       }
@@ -687,35 +757,30 @@ function updateFPS() {
 // Render Functions
 // ============================================================================
 
-function renderScene() {
+function renderScene(deltaTime, currentTimeSeconds) {
+  var dt = deltaTime || (1 / 60);
   updateFPS();
 
-  var currentTime = performance.now() / 1000;
-  g_lastFrameTime = currentTime;
-
-  // Update time
+  var currentTime = currentTimeSeconds || (performance.now() / 1000);
   g_seconds = currentTime - g_startTime;
 
   // Clear canvas
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Animate point light — orbit on XZ plane at height 3
-  var lightRadius = 5.0;
-  g_lightAngle += 0.5;
-  var lightRad = g_lightAngle * Math.PI / 180;
-  g_lightPos[0] = lightRadius * Math.cos(lightRad);
-  g_lightPos[1] = 3.0;
-  g_lightPos[2] = lightRadius * Math.sin(lightRad);
+  if (g_autoLightOrbit) {
+    var lightOrbitSpeed = 30; // degrees per second
+    var lightRadius = 5.0;
+    g_lightAngle = (g_lightAngle + lightOrbitSpeed * dt) % 360;
+    var lightRad = g_lightAngle * Math.PI / 180;
+    g_lightPos[0] = lightRadius * Math.cos(lightRad);
+    g_lightPos[1] = 3.0;
+    g_lightPos[2] = lightRadius * Math.sin(lightRad);
+  }
 
-  // Spotlight orbits at different speed
-  g_spotAngle += 0.3;
-  var spotRad = g_spotAngle * Math.PI / 180;
-  g_spotPos[0] = 4.0 * Math.cos(spotRad);
-  g_spotPos[1] = 8.0;
-  g_spotPos[2] = 4.0 * Math.sin(spotRad);
-  g_spotDir[0] = -g_spotPos[0];
-  g_spotDir[1] = -2.0;
-  g_spotDir[2] = -g_spotPos[2];
+  var spotOrbitSpeed = 20;
+  g_spotAngle = (g_spotAngle + spotOrbitSpeed * dt) % 360;
+
+  updateSpotlightPosition();
 
   // Pass per-frame lighting flags
   gl.uniform1i(u_ShowNormals, g_showNormals ? 1 : 0);
@@ -736,6 +801,9 @@ function renderScene() {
   gl.uniform1f(u_SpotCutoff,   g_spotCutoff);
   gl.uniform1f(u_SpotExponent, g_spotExponent);
   gl.uniform1i(u_SpotOn,       g_spotOn    ? 1 : 0);
+  gl.uniform1i(u_FloodOn,      g_floodOn   ? 1 : 0);
+  gl.uniform3fv(u_FloodDir,    g_floodDir);
+  gl.uniform1f(u_FloodIntensity, g_floodIntensity);
 
   // Set projection matrix
   var projMatrix = camera.getProjectionMatrix(canvas);
@@ -758,11 +826,13 @@ function renderScene() {
   drawGround();
   drawSpheres();
   drawBunny();
+  drawFloatingBunny();
   drawMap();
   drawRat();
 
   // Light markers: always unlit (handled inside drawLightMarker)
   drawLightMarker();
+  drawFloodPanel();
 }
 
 function drawSky() {
@@ -783,62 +853,121 @@ function drawGround() {
 }
 
 // Build batched geometry for all map blocks
-function buildMapGeometry() {
-  // Count total vertices needed (36 per cube)
-  var cubeCount = 0;
-  for (var x = 0; x < 32; x++) {
-    for (var z = 0; z < 32; z++) {
-      cubeCount += g_map[x][z];
+function createColumnMesh(x, z) {
+  var height = g_map[x][z];
+  if (height <= 0) {
+    return {
+      vertexCount: 0,
+      vertices: new Float32Array(0),
+      uvs: new Float32Array(0),
+      normals: new Float32Array(0)
+    };
+  }
+
+  var verts = [];
+  var uvs = [];
+  var norms = [];
+  for (var y = 0; y < height; y++) {
+    for (var i = 0; i < 36; i++) {
+      verts.push(Cube.vertices[i*3]   + (x - 16));
+      verts.push(Cube.vertices[i*3+1] + y);
+      verts.push(Cube.vertices[i*3+2] + (z - 16));
+      uvs.push(Cube.uvCoords[i*2], Cube.uvCoords[i*2+1]);
+      norms.push(Cube.normals[i*3], Cube.normals[i*3 + 1], Cube.normals[i*3 + 2]);
     }
   }
 
-  var vertexCount = cubeCount * 36;
-  g_mapVertices = new Float32Array(vertexCount * 3);
-  g_mapUVs = new Float32Array(vertexCount * 2);
-  g_mapNormals = new Float32Array(vertexCount * 3);
+  return {
+    vertexCount: verts.length / 3,
+    vertices: new Float32Array(verts),
+    uvs: new Float32Array(uvs),
+    normals: new Float32Array(norms)
+  };
+}
 
-  var vIdx = 0, uvIdx = 0, nIdx = 0;
+function ensureColumnOrder() {
+  if (g_columnOrder.length) return;
   for (var x = 0; x < 32; x++) {
     for (var z = 0; z < 32; z++) {
-      var height = g_map[x][z];
-      for (var y = 0; y < height; y++) {
-        // Copy cube vertices with offset (x-16, y, z-16)
-        for (var i = 0; i < 36; i++) {
-          g_mapVertices[vIdx++] = Cube.vertices[i*3]   + (x - 16);
-          g_mapVertices[vIdx++] = Cube.vertices[i*3+1] + y;
-          g_mapVertices[vIdx++] = Cube.vertices[i*3+2] + (z - 16);
-          g_mapUVs[uvIdx++] = Cube.uvCoords[i*2];
-          g_mapUVs[uvIdx++] = Cube.uvCoords[i*2+1];
-          g_mapNormals[nIdx++] = Cube.normals[i*3];
-          g_mapNormals[nIdx++] = Cube.normals[i*3 + 1];
-          g_mapNormals[nIdx++] = Cube.normals[i*3 + 2];
-        }
-      }
+      g_columnOrder.push(columnKey(x, z));
     }
   }
+}
 
-  g_mapVertexCount = vertexCount;
-
-  // Upload to GPU
-  if (!g_mapVertexBuffer) {
-    g_mapVertexBuffer = gl.createBuffer();
-    g_mapUVBuffer = gl.createBuffer();
+function uploadColumnMeshes() {
+  var totalVertices = 0;
+  for (var i = 0; i < g_columnOrder.length; i++) {
+    var mesh = g_columnMeshes[g_columnOrder[i]];
+    if (mesh) totalVertices += mesh.vertexCount;
   }
+
+  g_mapVertexCount = totalVertices;
+  if (totalVertices === 0) {
+    g_mapVertices = null;
+    g_mapUVs = null;
+    g_mapNormals = null;
+    return;
+  }
+
+  g_mapVertices = new Float32Array(totalVertices * 3);
+  g_mapUVs = new Float32Array(totalVertices * 2);
+  g_mapNormals = new Float32Array(totalVertices * 3);
+
+  var vOffset = 0, uvOffset = 0, nOffset = 0;
+  for (var j = 0; j < g_columnOrder.length; j++) {
+    var key = g_columnOrder[j];
+    var meshData = g_columnMeshes[key];
+    if (!meshData || meshData.vertexCount === 0) continue;
+    g_mapVertices.set(meshData.vertices, vOffset);
+    vOffset += meshData.vertices.length;
+    g_mapUVs.set(meshData.uvs, uvOffset);
+    uvOffset += meshData.uvs.length;
+    g_mapNormals.set(meshData.normals, nOffset);
+    nOffset += meshData.normals.length;
+  }
+
+  if (!g_mapVertexBuffer) g_mapVertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, g_mapVertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, g_mapVertices, gl.DYNAMIC_DRAW);
+
+  if (!g_mapUVBuffer) g_mapUVBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, g_mapUVBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, g_mapUVs, gl.DYNAMIC_DRAW);
 
   if (!g_mapNormalBuffer) g_mapNormalBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, g_mapNormalBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, g_mapNormals, gl.DYNAMIC_DRAW);
+}
 
-  g_mapNeedsRebuild = false;
-  console.log('Map geometry rebuilt: ' + cubeCount + ' cubes, ' + vertexCount + ' vertices');
+function buildMapGeometry() {
+  ensureColumnOrder();
+
+  if (g_mapNeedsRebuild) {
+    for (var x = 0; x < 32; x++) {
+      for (var z = 0; z < 32; z++) {
+        var key = columnKey(x, z);
+        g_columnMeshes[key] = createColumnMesh(x, z);
+      }
+    }
+    g_mapNeedsRebuild = false;
+    g_dirtyColumns.clear();
+  } else if (g_dirtyColumns.size > 0) {
+    g_dirtyColumns.forEach(function(key) {
+      var parts = key.split(':');
+      var cx = parseInt(parts[0], 10);
+      var cz = parseInt(parts[1], 10);
+      g_columnMeshes[key] = createColumnMesh(cx, cz);
+    });
+    g_dirtyColumns.clear();
+  } else {
+    return;
+  }
+
+  uploadColumnMeshes();
 }
 
 function drawMap() {
-  if (g_mapNeedsRebuild) {
+  if (g_mapNeedsRebuild || g_dirtyColumns.size > 0) {
     buildMapGeometry();
   }
 
@@ -1002,7 +1131,7 @@ function drawRatLeg(xOffset, zOffset, swing) {
 function drawSpheres() {
   // Sphere 1: white, near center
   g_sphereMatrix.setIdentity();
-  g_sphereMatrix.translate(3.0, 0.5, 3.0);
+  g_sphereMatrix.translate(3.0, 0.5, 2.6);
   g_sphereMatrix.scale(0.8, 0.8, 0.8);
   drawSphere(g_sphereMatrix, [1.0, 1.0, 1.0, 1.0], -2);
 
@@ -1015,6 +1144,28 @@ function drawSpheres() {
 
 function drawBunny() {
   if (g_bunny) g_bunny.render();
+}
+
+function drawFloatingBunny() {
+  if (!g_floatingBunny || !g_floatingBunny.isLoaded) return;
+
+  var bob = g_floatingBunnyBobAmplitude * Math.sin(g_seconds * g_floatingBunnyBobSpeed);
+  var spin = (g_seconds * g_floatingBunnySpinSpeed) % 360;
+
+  g_floatingBunny.matrix.setIdentity();
+  g_floatingBunny.matrix.translate(
+    g_floatingBunnyAnchor.x,
+    g_floatingBunnyAnchor.y + bob,
+    g_floatingBunnyAnchor.z
+  );
+  g_floatingBunny.matrix.rotate(spin, 0, 1, 0);
+  g_floatingBunny.matrix.scale(
+    g_floatingBunnyScale,
+    g_floatingBunnyScale,
+    g_floatingBunnyScale
+  );
+
+  g_floatingBunny.render();
 }
 
 function drawLightMarker() {
@@ -1037,13 +1188,29 @@ function drawLightMarker() {
   gl.uniform1i(u_LightingOn, g_lightingOn ? 1 : 0);
 }
 
+function drawFloodPanel() {
+  if (!g_floodOn) return;
+
+  gl.uniform1i(u_LightingOn, 0);
+  g_floodPanelMatrix.setIdentity();
+  g_floodPanelMatrix.translate(0, 10.5, 0);
+  g_floodPanelMatrix.scale(18, 0.08, 18);
+
+  var brightness = Math.min(1.0, 0.55 + 0.15 * g_floodIntensity);
+  drawCubeTextured(gl, a_Position, a_UV, u_ModelMatrix, u_FragColor, u_whichTexture,
+    g_floodPanelMatrix, [brightness, brightness, 0.9, 1.0], -2);
+
+  gl.uniform1i(u_LightingOn, g_lightingOn ? 1 : 0);
+}
+
 // ============================================================================
 // Animation Loop
 // ============================================================================
 
-function processInput() {
-  var speed = 0.1;  // Per-frame speed (lower since called every frame)
-  var rotSpeed = 2;
+function processInput(deltaTime) {
+  var dt = deltaTime || (1 / 60);
+  var speed = 4.0 * dt;    // units per second
+  var rotSpeed = 90 * dt;  // degrees per second
 
   if (g_keys['ShiftLeft'] || g_keys['ShiftRight']) {
     speed *= 3.0;
@@ -1056,18 +1223,26 @@ function processInput() {
   if (g_keys['KeyQ'] || g_keys['ArrowLeft'] || g_keys['KeyJ']) camera.panLeft(rotSpeed);
   if (g_keys['KeyE'] || g_keys['ArrowRight'] || g_keys['KeyL']) camera.panRight(rotSpeed);
 
-  if (g_keys['KeyI']) camera.tilt(rotSpeed);
-  if (g_keys['KeyK']) camera.tilt(-rotSpeed);
+  if (g_keys['KeyI']) camera.applyPitch(rotSpeed);
+  if (g_keys['KeyK']) camera.applyPitch(-rotSpeed);
 
   // Update physics (gravity, jumping)
-  camera.updatePhysics(g_map);
+  camera.updatePhysics(g_map, dt);
 
   checkRatProximity();
 }
 
 function tick() {
-  processInput();
-  renderScene();
+  var currentTime = performance.now() / 1000;
+  if (g_lastFrameTimeSeconds === null) {
+    g_deltaTime = 1 / 60;
+  } else {
+    g_deltaTime = Math.min(0.1, currentTime - g_lastFrameTimeSeconds);
+  }
+  g_lastFrameTimeSeconds = currentTime;
+
+  processInput(g_deltaTime);
+  renderScene(g_deltaTime, currentTime);
   requestAnimationFrame(tick);
 }
 
@@ -1097,8 +1272,13 @@ function main() {
 
   // The bunny OBJ is large (y ~0 to ~4) — scale down and position it
   g_bunny.matrix.setIdentity();
-  g_bunny.matrix.translate(5.0, -0.5, 5.0);
+  g_bunny.matrix.translate(0.0, -0.5, 0.0);
   g_bunny.matrix.scale(0.15, 0.15, 0.15);
+
+  g_floatingBunny = new Model();
+  g_floatingBunny.loadOBJ(gl, 'bunny.obj');
+  g_floatingBunny.color = [0.95, 0.85, 0.95, 1.0];
+  g_floatingBunny.matrix.setIdentity();
 
   // Initialize map
   initMap();
@@ -1128,6 +1308,10 @@ function main() {
     g_spotOn = !g_spotOn;
     this.textContent = 'Spotlight: ' + (g_spotOn ? 'ON' : 'OFF');
   });
+  document.getElementById('btn-flood-light').addEventListener('click', function() {
+    g_floodOn = !g_floodOn;
+    this.textContent = 'Floodlight: ' + (g_floodOn ? 'ON' : 'OFF');
+  });
 
   function updateLightColor() {
     var r = document.getElementById('slider-light-r').value / 255;
@@ -1140,13 +1324,80 @@ function main() {
   document.getElementById('slider-light-g').addEventListener('input', updateLightColor);
   document.getElementById('slider-light-b').addEventListener('input', updateLightColor);
 
-  document.getElementById('slider-light-x').addEventListener('input', function() {
-    g_lightAngle = parseFloat(this.value) * 18; // -10 to 10 maps to -180 to 180 degrees
+  var lightXSlider = document.getElementById('slider-light-x');
+  var lightZSlider = document.getElementById('slider-light-z');
+  var resetOrbitBtn = document.getElementById('btn-reset-orbit');
+
+  function updateOrbitButtonLabel() {
+    if (!resetOrbitBtn) return;
+    var pointStatus = g_autoLightOrbit ? 'Point: Auto' : 'Point: Manual';
+    resetOrbitBtn.textContent = 'Reset Light Orbit (' + pointStatus + ')';
+  }
+
+  function pauseLightOrbit() {
+    if (!g_autoLightOrbit) return;
+    g_autoLightOrbit = false;
+    updateOrbitButtonLabel();
+  }
+
+  function syncLightSliders() {
+    if (lightXSlider) lightXSlider.value = g_lightPos[0];
+    if (lightZSlider) lightZSlider.value = g_lightPos[2];
+  }
+
+  lightXSlider.addEventListener('input', function() {
+    pauseLightOrbit();
+    g_lightPos[0] = parseFloat(this.value);
   });
 
-  document.getElementById('slider-spot-angle').addEventListener('input', function() {
-    g_spotAngle = parseFloat(this.value);
+  lightZSlider.addEventListener('input', function() {
+    pauseLightOrbit();
+    g_lightPos[2] = parseFloat(this.value);
   });
+
+  resetOrbitBtn.addEventListener('click', function() {
+    g_autoLightOrbit = true;
+    g_lightAngle = 0;
+    g_spotAngle = 315.0;
+    updateSpotlightPosition();
+    syncLightSliders();
+    if (spotAngleSlider) spotAngleSlider.value = g_spotAngle;
+    updateOrbitButtonLabel();
+  });
+
+  var spotAngleSlider = document.getElementById('slider-spot-angle');
+  if (spotAngleSlider) {
+    spotAngleSlider.value = g_spotAngle;
+    spotAngleSlider.addEventListener('input', function() {
+      g_spotAngle = parseFloat(this.value);
+      updateSpotlightPosition();
+    });
+  }
+
+  var spotCutoffSlider = document.getElementById('slider-spot-cutoff');
+  if (spotCutoffSlider) {
+    spotCutoffSlider.value = (Math.acos(g_spotCutoff) * 180 / Math.PI);
+    spotCutoffSlider.addEventListener('input', function() {
+      var deg = parseFloat(this.value);
+      g_spotCutoff = Math.cos(deg * Math.PI / 180);
+    });
+  }
+
+  var spotExpSlider = document.getElementById('slider-spot-exp');
+  if (spotExpSlider) {
+    spotExpSlider.value = g_spotExponent;
+    spotExpSlider.addEventListener('input', function() {
+      g_spotExponent = parseFloat(this.value);
+    });
+  }
+
+  document.getElementById('slider-flood-intensity').addEventListener('input', function() {
+    g_floodIntensity = parseFloat(this.value) / 100.0;
+  });
+
+  syncLightSliders();
+  updateOrbitButtonLabel();
+  updateSpotlightPosition();
 
   // Initialize FPS tracking
   g_lastFPSUpdate = performance.now() / 1000;

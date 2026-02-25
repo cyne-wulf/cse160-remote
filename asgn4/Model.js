@@ -9,9 +9,11 @@ class Model {
     this.vertexBuffer = null;
     this.normalBuffer = null;
     this.vertexCount = 0;
+    this.gl = null;
   }
 
   loadOBJ(gl, filePath) {
+    this.gl = gl;
     var self = this;
     fetch(filePath)
       .then(function(r) {
@@ -23,6 +25,7 @@ class Model {
       })
       .catch(function(e) {
         console.error('Model load error:', e);
+        self._loadFallback(gl);
       });
   }
 
@@ -51,17 +54,60 @@ class Model {
       }
     }
 
+    this._uploadBuffers(gl, new Float32Array(unpackedV), new Float32Array(unpackedN));
+  }
+
+  _uploadBuffers(gl, positions, normals) {
+    if (!positions || positions.length === 0) {
+      console.warn('Model upload skipped: no vertex data');
+      return;
+    }
     this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(unpackedV), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
     this.normalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(unpackedN), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
 
-    this.vertexCount = unpackedV.length / 3;
+    this.vertexCount = positions.length / 3;
     this.isLoaded = true;
     console.log('Model loaded: ' + this.vertexCount + ' vertices');
+  }
+
+  _loadFallback(gl) {
+    if (typeof BUNNY_FALLBACK_POSITIONS !== 'undefined' && typeof BUNNY_FALLBACK_NORMALS !== 'undefined') {
+      this._uploadBuffers(gl, BUNNY_FALLBACK_POSITIONS, BUNNY_FALLBACK_NORMALS);
+      console.log('Loaded bunny from embedded fallback data.');
+      return;
+    }
+
+    var fileInput = document.getElementById('bunny-file-input');
+    var hint = document.getElementById('bunny-upload-hint');
+    if (!fileInput || !hint) {
+      console.warn('No fallback bunny input available.');
+      return;
+    }
+    hint.style.display = 'block';
+    fileInput.style.display = 'block';
+
+    var self = this;
+    function handleUpload() {
+      if (!fileInput.files || fileInput.files.length === 0) return;
+      var file = fileInput.files[0];
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        hint.textContent = 'Custom bunny OBJ loaded.';
+        self._parse(gl, evt.target.result);
+      };
+      reader.onerror = function() {
+        hint.textContent = 'Failed to read OBJ file.';
+      };
+      reader.readAsText(file);
+      fileInput.removeEventListener('change', handleUpload);
+    }
+
+    fileInput.addEventListener('change', handleUpload);
   }
 
   render() {

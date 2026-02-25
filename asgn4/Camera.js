@@ -7,11 +7,14 @@ class Camera {
     this.at = new Vector3([0, 0.5, -100]);
     this.up = new Vector3([0, 1, 0]);
     this.fov = 60;
+    this.pitch = 0;
+    this.minPitch = -89;
+    this.maxPitch = 89;
     
     // Physics properties
     this.yVelocity = 0;
-    this.gravity = 0.02; // Downward acceleration
-    this.jumpStrength = 0.25; // Initial upward velocity
+    this.gravity = 20;       // Downward acceleration (units/sec^2)
+    this.jumpStrength = 6;   // Initial upward velocity (units/sec)
     this.onGround = false;
   }
 
@@ -140,21 +143,37 @@ class Camera {
 
   // Tilt camera up/down (pitch) - rotate 'at' around right vector
   tilt(alpha) {
+    this.applyPitch(alpha);
+  }
+
+  applyPitch(deltaDeg) {
+    var epsilon = 0.0001;
+    var desired = Math.max(this.minPitch, Math.min(this.maxPitch, this.pitch + deltaDeg));
+    var actualDelta = desired - this.pitch;
+    if (Math.abs(actualDelta) < epsilon) {
+      this.pitch = desired;
+      return;
+    }
+
     var f = new Vector3();
     f.set(this.at);
     f.sub(this.eye);
 
-    // Get right vector
     var s = Vector3.cross(f, this.up);
+    if (!s || s.magnitude() < 1e-6) {
+      this.pitch = desired;
+      return;
+    }
     s.normalize();
 
     var rotationMatrix = new Matrix4();
-    rotationMatrix.setRotate(alpha, s.elements[0], s.elements[1], s.elements[2]);
+    rotationMatrix.setRotate(actualDelta, s.elements[0], s.elements[1], s.elements[2]);
 
     var f_prime = rotationMatrix.multiplyVector3(f);
 
     this.at.set(this.eye);
     this.at.add(f_prime);
+    this.pitch = desired;
   }
 
   // Jump logic
@@ -166,13 +185,14 @@ class Camera {
   }
 
   // Physics loop (gravity and collision)
-  updatePhysics(map) {
+  updatePhysics(map, deltaTime) {
+    var dt = deltaTime || (1 / 60);
     // Apply velocity
-    this.eye.elements[1] += this.yVelocity;
-    this.at.elements[1] += this.yVelocity;
+    this.eye.elements[1] += this.yVelocity * dt;
+    this.at.elements[1] += this.yVelocity * dt;
 
     // Apply gravity
-    this.yVelocity -= this.gravity;
+    this.yVelocity -= this.gravity * dt;
 
     // Find ground level at current position
     var gridX = Math.floor(this.eye.elements[0] + 0.5) + 16;

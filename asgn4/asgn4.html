@@ -124,14 +124,21 @@
       <button id="btn-normals">Show Normals: OFF</button>
       <button id="btn-point-light">Point Light: ON</button>
       <button id="btn-spotlight">Spotlight: ON</button>
-      <br><br>
-      <label>Light X Position: <input type="range" id="slider-light-x" min="-10" max="10" value="5" step="0.1"></label>
-      <br>
-      <label>Light Color R: <input type="range" id="slider-light-r" min="0" max="255" value="255"></label>
-      <label>G: <input type="range" id="slider-light-g" min="0" max="255" value="255"></label>
-      <label>B: <input type="range" id="slider-light-b" min="0" max="255" value="255"></label>
-      <br>
-      <label>Spotlight Angle: <input type="range" id="slider-spot-angle" min="0" max="360" value="0" step="1"></label>
+      <button id="btn-flood-light">Floodlight: ON</button>
+      <button id="btn-reset-orbit">Reset Light Orbit</button>
+      <br /><br />
+      <label>Light X Position: <input type="range" id="slider-light-x" min="-10" max="10" value="5" step="0.1" /></label>
+      <label>Light Z Position: <input type="range" id="slider-light-z" min="-10" max="10" value="0" step="0.1" /></label>
+      <br />
+      <label>Light Color R: <input type="range" id="slider-light-r" min="0" max="255" value="255" /></label>
+      <label>G: <input type="range" id="slider-light-g" min="0" max="255" value="255" /></label>
+      <label>B: <input type="range" id="slider-light-b" min="0" max="255" value="255" /></label>
+      <br />
+      <label>Spotlight Orbit Angle: <input type="range" id="slider-spot-angle" min="0" max="360" value="315" step="1" /></label>
+      <label>Spotlight Cone Angle: <input type="range" id="slider-spot-cutoff" min="5" max="90" value="20" step="1" /></label>
+      <label>Spotlight Sharpness: <input type="range" id="slider-spot-exp" min="1" max="64" value="15" step="1" /></label>
+      <br />
+      <label>Floodlight Intensity: <input type="range" id="slider-flood-intensity" min="0" max="300" value="0" step="5" /></label>
     </div>
 
     <div class="controls instructions">
@@ -172,9 +179,14 @@
     <script src="Camera.js"></script>
     <script src="Cube.js"></script>
     <script src="Sphere.js"></script>
+    <script src="bunny-data.js"></script>
     <script src="Model.js"></script>
 
     <!-- Main application -->
     <script src="World.js"></script>
+    <input type="file" id="bunny-file-input" accept=".obj,.txt" style="display:none" />
+    <p id="bunny-upload-hint" style="display:none;color:#ffb347;">
+      Could not auto-load bunny model. Use the picker above to select <code>bunny.obj</code>.
+    </p>
   </body>
 </html>
