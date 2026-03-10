@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Japan Night Festival — Three.js</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; }
+    #c { width: 100vw; height: 100vh; display: block; }
+    #info {
+      position: absolute;
+      top: 10px; left: 10px;
+      color: white;
+      font: 14px/1.6 monospace;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 12px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+  </style>
+
+  <!-- Three.js via CDN import map -->
+  <!-- Check https://www.npmjs.com/package/three for latest version -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="info">
+    <strong>Japan Night Festival (Obon Matsuri)</strong><br>
+    <span id="info-controls">Drag to orbit &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Right-drag to pan &nbsp;|&nbsp; <strong>G</strong> = Ground mode</span><br><br>
+    <em>&#10024; Wow: Dual camera modes with orbit flight and first-person ground exploration,
+    plus a physics fireworks show, animated cherry blossom petal rain, sculpted terrain,
+    and imported Poly Pizza environmental props.</em>
+  </div>
+  <div id="mode-badge" style="position:absolute;top:10px;right:10px;color:white;font:bold 13px monospace;background:rgba(0,0,0,0.6);padding:5px 10px;border-radius:4px;pointer-events:none;">[FLY]</div>
+  <script type="module" src="asgn5.js"></script>
+</body>
+</html>
