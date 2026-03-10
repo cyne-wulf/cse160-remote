@@ -183,30 +183,6 @@ const skyTex = makeTex((ctx, w, h) => {
     ctx.restore();
   });
 
-  ctx.save();
-  ctx.translate(w * 0.52, h * 0.30);
-  ctx.rotate(-0.28);
-  const milkyWay = ctx.createLinearGradient(-w * 0.48, 0, w * 0.48, 0);
-  milkyWay.addColorStop(0.00, 'rgba(0,0,0,0)');
-  milkyWay.addColorStop(0.18, 'rgba(80,95,170,0.10)');
-  milkyWay.addColorStop(0.50, 'rgba(200,210,255,0.24)');
-  milkyWay.addColorStop(0.82, 'rgba(98,110,180,0.12)');
-  milkyWay.addColorStop(1.00, 'rgba(0,0,0,0)');
-  ctx.fillStyle = milkyWay;
-  ctx.fillRect(-w * 0.5, -h * 0.08, w, h * 0.16);
-
-  for (let i = 0; i < 2200; i++) {
-    const x = (Math.random() - 0.5) * w * 0.92;
-    const y = (Math.random() - 0.5) * h * 0.10;
-    const size = 0.6 + Math.random() * 1.8;
-    const alpha = 0.10 + Math.random() * 0.22;
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(235,240,255,${alpha})`;
-    ctx.fill();
-  }
-  ctx.restore();
-
   const drawGlowStar = (x, y, radius, color, glowAlpha) => {
     const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 8);
     glow.addColorStop(0.00, `rgba(255,255,255,${glowAlpha})`);
